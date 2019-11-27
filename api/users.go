@@ -11,24 +11,26 @@ import (
 	"strconv"
 )
 
+const errMsgKey = "errMsg"
 func FetchCoupon(ctx *gin.Context)  {
 	// 登陆检查
 	session := sessions.Default(ctx)
 	sessionUser := session.Get("user")
 	if sessionUser == nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Not Logged in."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Not Logged in."})
 		return
 	}
 	user := sessionUser.(*model.User)
 	if user.IsSeller() {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Sellers aren't allowed to get coupons."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Sellers aren't allowed to get coupons."})
 		return
 	}
 
-	paramSellerName := ctx.PostForm("username")
-	paramCouponName := ctx.PostForm("name")
+	paramSellerName := ctx.Param("username")
+	paramCouponName := ctx.Param("name")
 
-	// 用户抢优惠券。此处需要高并发处理
+	// ---用户抢优惠券。后面需要高并发处理---
+	// 查看是否有该优惠券，若没有，直接返回错误
 	coupon := model.Coupon{Username: paramSellerName, CouponName: paramCouponName}
 	err := database.Db.Where(&coupon).First(&coupon).Error
 	if err != nil {
@@ -36,18 +38,44 @@ func FetchCoupon(ctx *gin.Context)  {
 		return
 	}
 
+	// 用户没抢过，才能加入抢购
+	hasCoupon := model.Coupon{Username: user.Username, CouponName:paramCouponName}
+	err = database.Db.Where(&hasCoupon).First(&hasCoupon).Error
+	if err == nil || !gorm.IsRecordNotFoundError(err) {
+		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Customer has got the coupon."})
+		return
+	}
+
+	// 抢优惠券
+	updateErr := database.Db.Exec(fmt.Sprintf("UPDATE ginhello.coupons c SET c.left=c.left-1 WHERE " +
+		"c.username='%s' AND c.coupon_name='%s' AND c.left>0", paramSellerName, paramCouponName)).Error
+	if updateErr != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Get coupon failed."})
+		return
+	}
+
+	// 先直接返回
+	ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Please wait for the result."})
+
+	// 抢到后加入用户拥有的优惠券
+	userCoupon := model.Coupon{Username: user.Username, CouponName:paramCouponName,
+		Amount:1, Left:1, Stock:coupon.Stock, Description:coupon.Description}
+	err = database.Db.Create(&userCoupon).Error
+	if err != nil {
+		// 应再次尝试创建
+	}
 
 }
 
 const (
-	coupon_page_size = 20
+	couponPageSize = 20
 )
 
 func outputQueryError(ctx *gin.Context, err error) {
 	if gorm.IsRecordNotFoundError(err) {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "No such user."})
+		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Record not found."})
 	} else {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Query error."})
+		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Query error."})
 	}
 }
 
@@ -91,7 +119,7 @@ func GetCoupons(ctx *gin.Context) {
 	if queryUserName == user.Username {
 		// 查询名与用户名相同，返回查询名用户的优惠券
 		var coupons []model.Coupon
-		database.Db.Offset(page * coupon_page_size).Limit(coupon_page_size).
+		database.Db.Offset(page *couponPageSize).Limit(couponPageSize).
 			Find(&coupons, model.Coupon{Username:queryUserName})
 
 		if queryUser.IsSeller() {
@@ -112,7 +140,7 @@ func GetCoupons(ctx *gin.Context) {
 		} else if queryUser.IsSeller() {
 			// 可以查询其它商家
 			var coupons []model.Coupon
-			database.Db.Offset(page * coupon_page_size).Limit(coupon_page_size).
+			database.Db.Offset(page *couponPageSize).Limit(couponPageSize).
 				Find(&coupons, model.Coupon{Username:queryUserName})
 			sellerCoupons := model.ParseSellerResCoupons(coupons)
 			ctx.JSON(http.StatusOK, sellerCoupons)
@@ -211,7 +239,7 @@ func RegisterUser(ctx *gin.Context) {
 
 	// 插入用户
 	username, password := postUserName, model.GetMD5(postPassword)
-	user := model.User{0, username, kind, password}
+	user := model.User{Username: username, Kind: kind, Password: password}
 	err := database.Db.Create(&user).Error
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{errMsgKey: "Insert user failed. Maybe user name duplicates."})
