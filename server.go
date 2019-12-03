@@ -3,6 +3,7 @@ package main
 import (
 	"SecKill/api"
 	"SecKill/model"
+	"SecKill/conf"
 	"encoding/gob"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/redis"
@@ -14,7 +15,12 @@ func main() {
 	router := gin.Default()
 
 	// 设置Redis存储
-	store, _ := redis.NewStore(10, "tcp", "localhost:6379", "", []byte("seckill"))
+	config, err := conf.GetAppConfig()
+	if err != nil {
+		panic("failed to load redis config" + err.Error())
+	}
+	store, _ := redis.NewStore(config.App.Redis.MaxIdle, config.App.Redis.Network,
+		config.App.Redis.Address, config.App.Redis.Password, []byte("seckill"))
 	router.Use(sessions.Sessions("mysession", store))
 	gob.Register(&model.User{})
 

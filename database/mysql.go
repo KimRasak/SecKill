@@ -1,6 +1,7 @@
 package database
 
 import (
+	"SecKill/conf"
 	"SecKill/model"
 	"fmt"
 	"github.com/jinzhu/gorm"
@@ -10,17 +11,29 @@ import (
 var Db *gorm.DB
 
 func init() {
-	fmt.Println("Init mysql connections.")
-	//创建一个数据库的连接
-	var err error
-	Db, err = gorm.Open("mysql", "root:shen6508@/ginhello?charset=utf8&parseTime=True&loc=Local")
+	fmt.Println("Load mysql config.")
+	config, err := conf.GetAppConfig()
 	if err != nil {
-		panic("failed to connect database" + err.Error())
+		panic("failed to load database config: " + err.Error())
+	}
+	dbType := config.App.Database.Type
+	usr := config.App.Database.User
+	pwd := config.App.Database.Password
+	address := config.App.Database.Address
+	dbName := config.App.Database.DbName
+	dbLink := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=True&loc=Local",
+		usr, pwd, address, dbName)
+
+	//创建一个数据库的连接
+	fmt.Println("Init mysql connections.")
+	Db, err = gorm.Open(dbType, dbLink)
+	if err != nil {
+		panic("failed to connect database: " + err.Error())
 	}
 
 	// 设置连接池连接数
-	Db.DB().SetMaxOpenConns(10)
-	Db.DB().SetMaxIdleConns(10)
+	Db.DB().SetMaxOpenConns(config.App.Database.MaxOpen)
+	Db.DB().SetMaxIdleConns(config.App.Database.MaxIdle)
 
 	// 初始化数据库
 	user := model.User{}
