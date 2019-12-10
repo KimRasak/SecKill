@@ -8,16 +8,16 @@ import (
 	"net/http"
 )
 
-import "SecKill/database"
+import "SecKill/data"
 
+const kindKey = "kind"
 func LoginAuth(ctx *gin.Context)  {
-	const kindKey, errMsgKey = "kind", "errMsg"
 	username := ctx.PostForm("username")
 	password := model.GetMD5(ctx.PostForm("password"))
 
 	// 查找该用户
 	queryUser := model.User{Username: username}
-	err := database.Db.Where(&queryUser).
+	err := data.Db.Where(&queryUser).
 		First(&queryUser).Error
 	if err != nil && gorm.IsRecordNotFoundError(err) {
 		ctx.JSON(http.StatusBadRequest, gin.H{kindKey: "", errMsgKey: "No such queryUser."})

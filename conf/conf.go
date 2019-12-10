@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-const configFilePath string = "config.yaml"
+const configFilePath string = "config-dev.yaml"
 
 var configFile []byte
 
@@ -38,7 +38,7 @@ type Redis struct {
 	IdleTimeout int `yaml:"idleTimeout"`
 }
 
-func GetAppConfig() (appConfig *AppConfig, err error)  {
+func GetAppConfig() (appConfig AppConfig, err error)  {
 	err = yaml.Unmarshal(configFile, &appConfig)
 	return appConfig, err
 }

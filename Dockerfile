@@ -20,6 +20,6 @@ FROM scratch as prod
 COPY --from=build /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /go/release/app /
-ADD config.yaml .
+ADD config-prod.yaml .
 
 CMD ["/app"]

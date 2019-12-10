@@ -1,4 +1,4 @@
-package database
+package data
 
 import (
 	"SecKill/conf"
@@ -10,12 +10,11 @@ import (
 
 var Db *gorm.DB
 
-func init() {
-	fmt.Println("Load mysql config.")
-	config, err := conf.GetAppConfig()
-	if err != nil {
-		panic("failed to load database config: " + err.Error())
-	}
+// 初始化连接，确保创建表、索引等
+func initMysql(config conf.AppConfig) {
+	fmt.Println("Load dbService config.")
+
+	// 设置连接相关的参数
 	dbType := config.App.Database.Type
 	usr := config.App.Database.User
 	pwd := config.App.Database.Password
@@ -25,10 +24,11 @@ func init() {
 		usr, pwd, address, dbName)
 
 	//创建一个数据库的连接
-	fmt.Println("Init mysql connections.")
+	fmt.Println("Init dbService connections.")
+	var err error
 	Db, err = gorm.Open(dbType, dbLink)
 	if err != nil {
-		panic("failed to connect database: " + err.Error())
+		panic("failed to connect data: " + err.Error())
 	}
 
 	// 设置连接池连接数
@@ -48,11 +48,18 @@ func init() {
 	}
 
 	// 创建唯一索引
-	Db.Model(user).AddUniqueIndex("username_index", "username")
-	Db.Model(coupon).AddUniqueIndex("coupon_index", "username", "coupon_name")
+	Db.Model(user).AddUniqueIndex("username_index", "username")  // 用户的用户名唯一
+	Db.Model(coupon).AddUniqueIndex("coupon_index", "username", "coupon_name")  // 优惠券的(用户名, 优惠券名)唯一
 
+	println("---Mysql connection is initialized.---")
+	// 添加外键的demo代码
+	// Db.Model(credit_card).
+	//	 AddForeignKey("owner_id", "users(id)", "RESTRICT", "RESTRICT").
+	//	 AddUniqueIndex("unique_owner", "owner_id")
+}
 
-	//Db.Model(credit_card).
-	//	AddForeignKey("owner_id", "users(id)", "RESTRICT", "RESTRICT").
-	//	AddUniqueIndex("unique_owner", "owner_id")
+func GetAllCoupons() ([]model.Coupon, error) {
+	var coupons []model.Coupon
+	result := Db.Find(&coupons)
+	return coupons, result.Error
 }
