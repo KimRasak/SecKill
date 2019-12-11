@@ -53,7 +53,7 @@ func FetchCoupon(ctx *gin.Context)  {
 		// TODO:
 		// 204表示未抢到，需要在errMsg说明理由
 		// 5xx表示服务端错误
-		ctx.JSON(http.StatusNoContent, gin.H{errMsgKey: "No enough coupon or user already has this coupon"})
+		ctx.JSON(http.StatusNoContent, gin.H{errMsgKey: err.Error()})
 		println("Cache secKill error. " + err.Error())
 		// 可在此将err输出到log.
 	}
