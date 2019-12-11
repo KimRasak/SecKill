@@ -46,6 +46,7 @@ func FetchCoupon(ctx *gin.Context)  {
 		// 2. 将数据库里优惠券的库存-1
 		// 可以建立一个带缓冲的channel
 		// 传输的信息要包含user.Username, paramSellerName, paramCouponName
+		ctx.JSON(http.StatusOK, gin.H{errMsgKey: ""})
 	} else {
 		println("Cache secKill error. " + err.Error())
 		// 可在此将err输出到log.

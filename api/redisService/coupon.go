@@ -1,6 +1,7 @@
 package redisService
 
 import (
+	"SecKill/api/dbService"
 	"SecKill/data"
 	"SecKill/model"
 	"fmt"
@@ -9,13 +10,8 @@ import (
 
 
 // 获取"用户持有优惠券"的key
-func getUserHasCouponKey(userName string, sellerName string, couponName string) string {
+func getHasCouponKeyByName(userName string, sellerName string, couponName string) string {
 	return fmt.Sprintf("%s-has-(%s,%s)", userName, sellerName, couponName)
-}
-
-// 获取"优惠券库存"的key
-func getCouponLeftKey(sellerName string, couponName string) string {
-	return fmt.Sprintf("(%s,%s)-left", sellerName, couponName)
 }
 
 // 获取"优惠券"的key
@@ -26,8 +22,13 @@ func getCouponKeyByName(sellerName string, couponName string) string {
 	return fmt.Sprintf("(%s,%s)", sellerName, couponName)
 }
 
-// 缓存优惠券
-func CacheCoupon(coupon model.Coupon) (string, error) {
+func CacheHasCoupon(username string, coupon model.Coupon) (string, error) {
+	key := getHasCouponKeyByName(username, coupon.Username, coupon.CouponName)
+	val, err := data.SetForever(key, 1)
+	return val, err
+}
+
+func CacheFullCoupon(coupon model.Coupon) (string, error) {
 	key := getCouponKeyByCoupon(coupon)
 	fields := map[string]interface{}{
 		"id": coupon.Id,
@@ -40,6 +41,22 @@ func CacheCoupon(coupon model.Coupon) (string, error) {
 	}
 	val, err := data.SetMapForever(key, fields)
 	return val, err
+}
+
+// 缓存优惠券
+func CacheCoupon(coupon model.Coupon) (string, error) {
+	user, err := dbService.GetUser(coupon.Username)
+	if err != nil {
+		println("Error when getting user.")
+	}
+	if user.IsCustomer() {
+		// 缓存拥有优惠券消息
+		return CacheHasCoupon(user.Username, coupon)
+	} else if user.IsSeller() {
+		// 缓存完整优惠券消息
+		return CacheFullCoupon(coupon)
+	}
+	panic(fmt.Sprintf("Wrong type of user. %s %d", user.Username, user.Kind))
 }
 
 func GetCoupon(sellerName string, couponName string) model.Coupon {
@@ -75,13 +92,4 @@ func GetCoupon(sellerName string, couponName string) model.Coupon {
 		Description: values[6].(string),
 	}
 
-}
-
-func CacheCouponLeft(coupon model.Coupon) (string, error) {
-	sellerName := coupon.Username
-	couponName := coupon.CouponName
-	left := coupon.Left
-	key := getCouponLeftKey(sellerName, couponName)
-	res, err := data.SetForever(key, left)
-	return res, err
 }
