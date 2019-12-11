@@ -7,9 +7,9 @@ import (
 
 const secKillScript = `
     --- Check if User has coupon ---
-    --- KEYS[1]: "{username}-has"
-    --- KEYS[2]: "{couponName}"
-    --- KEYS[3]: "{couponName}-info"
+    --- KEYS[1]: hasCouponKey "{username}-has"
+    --- KEYS[2]: couponName   "{couponName}"
+    --- KEYS[3]: couponKey    "{couponName}-info"
 	local userHasCoupon = redis.call("SISMEMBER", KEYS[1], KEYS[2]);
 	if (userHasCoupon == 1)
 	then
