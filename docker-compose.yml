@@ -1,7 +1,7 @@
 version: "2"
 services:
   mysql-service:
-    image: dbService:5.7
+    image: mysql:5.7
     ports:
       - "3306:3306"
     restart: 'no'
@@ -11,8 +11,8 @@ services:
       MYSQL_USER: "developer"
       MYSQL_PASSWORD: "123456"
   redis-service:
-    image: redisService
-    command: redisService-server --requirepass 123456
+    image: redis
+    command: redis-server --requirepass 123456
     ports:
       - "6379:6379"
     restart: 'no'
@@ -22,5 +22,5 @@ services:
     ports:
       - "8000:8000"
     links:
-      - dbService-redisService:dbService
-      - redisService-redisService:redisService
+      - mysql-service:mysql
+      - redis-service:redis

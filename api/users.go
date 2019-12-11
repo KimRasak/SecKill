@@ -48,8 +48,12 @@ func FetchCoupon(ctx *gin.Context)  {
 		// 2. 将数据库里优惠券的库存-1
 		// 可以建立一个带缓冲的channel
 		// 传输的信息要包含user.Username, paramSellerName, paramCouponName
-		ctx.JSON(http.StatusOK, gin.H{errMsgKey: ""})
+		ctx.JSON(http.StatusCreated, gin.H{errMsgKey: ""})
 	} else {
+		// TODO:
+		// 204表示未抢到，需要在errMsg说明理由
+		// 5xx表示服务端错误
+		ctx.JSON(http.StatusNoContent, gin.H{errMsgKey: "No enough coupon or user already has this coupon"})
 		println("Cache secKill error. " + err.Error())
 		// 可在此将err输出到log.
 	}
@@ -74,7 +78,7 @@ func GetCoupons(ctx *gin.Context) {
 	session := sessions.Default(ctx)
 	sessionUser := session.Get("user")
 	if sessionUser == nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Not Logged in."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Not Logged in."})
 		return
 	}
 	user := sessionUser.(*model.User)
@@ -89,7 +93,7 @@ func GetCoupons(ctx *gin.Context) {
 		var err error
 		page, err = strconv.ParseInt(ctx.Query("page"), 10, 64)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": "Wrong format of page."})
+			ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Wrong format of page."})
 			return
 		}
 	}
@@ -110,7 +114,8 @@ func GetCoupons(ctx *gin.Context) {
 		var allCoupons []model.Coupon
 		var err error
 		if allCoupons, err = redisService.GetCoupons(user.Username); err != nil {
-			ctx.JSON(http.StatusInternalServerError, "Error on " + err.Error())
+			ctx.JSON(http.StatusInternalServerError, gin.H{errMsgKey: "Server error"})
+			return
 		}
 
 		// 取得切片范围
@@ -223,11 +228,11 @@ func AddCoupon(ctx *gin.Context) {
 
 	// 在Redis添加优惠券
 	if err = redisService.CacheCouponAndHasCoupon(coupon); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Create Cache failed. " + err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{errMsgKey: "Create Cache failed. " + err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{errMsgKey: ""})
+	ctx.JSON(http.StatusCreated, gin.H{errMsgKey: ""})
 	return
 
 }

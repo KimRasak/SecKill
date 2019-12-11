@@ -20,13 +20,13 @@ func LoginAuth(ctx *gin.Context)  {
 	err := data.Db.Where(&queryUser).
 		First(&queryUser).Error
 	if err != nil && gorm.IsRecordNotFoundError(err) {
-		ctx.JSON(http.StatusBadRequest, gin.H{kindKey: "", errMsgKey: "No such queryUser."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: "", errMsgKey: "No such queryUser."})
 		return
 	}
 
 	// 匹配密码
 	if queryUser.Password != password {
-		ctx.JSON(http.StatusBadRequest, gin.H{kindKey: queryUser.Kind, errMsgKey: "Password mismatched."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: queryUser.Kind, errMsgKey: "Password mismatched."})
 		return
 	}
 
