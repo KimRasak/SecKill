@@ -12,7 +12,10 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
-func main() {
+// Visible for test
+const SessionHeaderKey =  "mysession"
+
+func RunServer()  {
 	router := gin.Default()
 
 	// 设置session为Redis存储
@@ -22,7 +25,7 @@ func main() {
 	}
 	store, _ := redis.NewStore(config.App.Redis.MaxIdle, config.App.Redis.Network,
 		config.App.Redis.Address, config.App.Redis.Password, []byte("seckill"))
-	router.Use(sessions.Sessions("mysession", store))
+	router.Use(sessions.Sessions(SessionHeaderKey, store))
 	gob.Register(&model.User{})
 
 	// 设置路由
@@ -49,5 +52,9 @@ func main() {
 
 	router.Run(":8000")
 	defer data.Close()
+}
+
+func main() {
+	RunServer()
 }
 
