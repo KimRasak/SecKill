@@ -44,6 +44,9 @@ func main() {
 		testRouter.GET("/", api.Welcome)
 	}
 
+	// 启动秒杀功能的消费者
+	api.RunSecKillConsumer()
+
 	router.Run(":8000")
 	defer data.Close()
 }

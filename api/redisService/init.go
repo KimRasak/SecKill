@@ -1,15 +1,20 @@
 package redisService
 
-import "SecKill/data"
+import (
+	"SecKill/api/dbService"
+	"SecKill/data"
+)
 
 const secKillScript = `
+    --- Check if User has coupon ---
 	local userHasCoupon = redis.call("get", KEYS[1]);
 	if (userHasCoupon ~= false)
 	then
-		return -1;  --- user has had the coupon
+		return -1;
 	end
 
-	local couponLeft = redis.call("get", KEYS[2]);
+    --- Check if coupon exists and is cached ---
+	local couponLeft = redis.call("hget", KEYS[2], "left");
 	if (couponLeft == false)
 	then
 		return -2;  --- No such coupon
@@ -19,8 +24,8 @@ const secKillScript = `
 		return -3;  ---  No Coupon Left.
 	end
 	
-   ---/ User gets the coupon
-	redis.call("set", KEYS[2], couponLeft - 1);
+    --- User gets the coupon ---
+	redis.call("hset", KEYS[2], "left", couponLeft - 1);
 	redis.call("set", KEYS[1], 1);
 	return 1;
 `
@@ -31,22 +36,18 @@ var secKillSHA string  // SHA expression of secKillScript
 // 将数据加载到缓存预热，防止缓存穿透
 // 预热加载了商品库存key
 func preHeatKeys()  {
-	coupons, err := data.GetAllCoupons()
+	coupons, err := dbService.GetAllCoupons()
 	if err != nil {
 		panic("Error when getting all coupons." + err.Error())
 	}
 
-	printResultOnce := true
 	for _, coupon := range coupons {
-		res, err := CacheCoupon(coupon)
+		_, err := CacheCoupon(coupon)
 		if err != nil {
-			panic("Error while setting redisService keys of coupons left " + err.Error())
-		}
-		if printResultOnce {
-			print("Set redis keys of coupons left success. " + res)
-			printResultOnce = false
+			panic("Error while setting redis keys of coupons. " + err.Error())
 		}
 	}
+	print("Set redis keys of coupons success.")
 }
 
 func init() {

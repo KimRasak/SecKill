@@ -58,8 +58,3 @@ func initMysql(config conf.AppConfig) {
 	//	 AddUniqueIndex("unique_owner", "owner_id")
 }
 
-func GetAllCoupons() ([]model.Coupon, error) {
-	var coupons []model.Coupon
-	result := Db.Find(&coupons)
-	return coupons, result.Error
-}

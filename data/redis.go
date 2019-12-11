@@ -11,7 +11,7 @@ var client *redis.Client
 func initRedisConnection(config conf.AppConfig)  {
 	client = redis.NewClient(&redis.Options{
 		Addr:     config.App.Redis.Address,
-		Password: config.App.Redis.Password, // no password set
+		Password: config.App.Redis.Password, // It's ok if password is "".
 		DB:       0,  // use default DB
 	})
 }
@@ -44,8 +44,18 @@ func EvalSHA(sha string, args []string) (interface{}, error) {
 	return val, nil
 }
 
-// redisService SET
+// redis operation SET
 func SetForever(key string, value interface{}) (string, error) {
 	val, err := client.Set(key, value, 0).Result()  // expiration表示无过期时间
 	return val, err
+}
+
+// redis operation hmset
+func SetMapForever(key string, field map[string]interface{}) (string, error) {
+	return client.HMSet(key, field).Result()
+}
+
+// redis operation hmget
+func GetMap(key string, fields ...string) ([]interface{}, error) {
+	return client.HMGet(key, fields...).Result()
 }

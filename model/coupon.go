@@ -6,7 +6,7 @@ const (
 
 // 数据库实体
 type Coupon struct {
-	Id          int       `gorm:"primary_key;auto_increment"`
+	Id          int64     `gorm:"primary_key;auto_increment"`
 	Username    string    `gorm:"type:varchar(20); not null"` // 用户名
 	CouponName  string    `gorm:"type:varchar(60); not null"` // 优惠券名称
 	Amount      int64     `gorm:"type:varchar(32)"`           // 最大优惠券数

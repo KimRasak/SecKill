@@ -55,17 +55,17 @@ func (e CouponLeftResError) Error() string {
 }
 
 // 尝试在redis进行原子性的秒杀操作
-func CacheAtomicSecKill(userName string, sellerName string, couponName string) (int, error) {
+func CacheAtomicSecKill(userName string, sellerName string, couponName string) (int64, error) {
 	// 根据sha，执行预先加载的秒杀lua脚本
 	userHasCouponKey := getUserHasCouponKey(userName, sellerName, couponName)
-	couponLeftKey := getCouponLeftKey(sellerName, couponName)
-	res, err := data.EvalSHA(secKillSHA, []string{userHasCouponKey, couponLeftKey})
+	couponKey := getCouponKeyByName(sellerName, couponName)
+	res, err := data.EvalSHA(secKillSHA, []string{userHasCouponKey, couponKey})
 	if err != nil {
 		return -1, redisEvalError{}
 	}
 
 	// 该lua脚本应当返回int值
-	couponLeftRes, ok := res.(int)
+	couponLeftRes, ok := res.(int64)
 	if !ok {
 		return -1, CouponLeftResError{res}
 	}

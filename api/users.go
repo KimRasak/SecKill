@@ -38,13 +38,16 @@ func FetchCoupon(ctx *gin.Context)  {
 	secKillRes, err := redisService.CacheAtomicSecKill(user.Username, paramSellerName, paramCouponName)
 	if err == nil {
 		print(fmt.Sprintf("result: %d", secKillRes))
+		coupon := redisService.GetCoupon(paramSellerName, paramCouponName)
 		// 交给[协程]完成数据库写入操作
+		SecKillChannel <- secKillMessage{user.Username, coupon}
 		// TODO:
 		// 1. 把用户拥有优惠券的行为存到数据库
 		// 2. 将数据库里优惠券的库存-1
 		// 可以建立一个带缓冲的channel
 		// 传输的信息要包含user.Username, paramSellerName, paramCouponName
 	} else {
+		println("Cache secKill error. " + err.Error())
 		// 可在此将err输出到log.
 	}
 
