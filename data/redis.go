@@ -59,3 +59,18 @@ func SetMapForever(key string, field map[string]interface{}) (string, error) {
 func GetMap(key string, fields ...string) ([]interface{}, error) {
 	return client.HMGet(key, fields...).Result()
 }
+
+// redis SADD
+func SetAdd(key string, field string) (int64, error) {
+	return client.SAdd(key, field).Result()
+}
+
+// redis SISMEMBER
+func SetIsMember(key string, field string) (bool, error) {
+	return client.SIsMember(key, field).Result()
+}
+
+// redis SMEMBERS
+func GetSetMembers(key string) ([]string, error) {
+	return client.SMembers(key).Result()
+}

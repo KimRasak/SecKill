@@ -13,8 +13,10 @@ import (
 )
 
 const errMsgKey = "errMsg"
+const dataKey = "data"
 
 
+// 秒杀优惠券
 func FetchCoupon(ctx *gin.Context)  {
 	// 登陆检查
 	session := sessions.Default(ctx)
@@ -38,7 +40,7 @@ func FetchCoupon(ctx *gin.Context)  {
 	secKillRes, err := redisService.CacheAtomicSecKill(user.Username, paramSellerName, paramCouponName)
 	if err == nil {
 		print(fmt.Sprintf("result: %d", secKillRes))
-		coupon := redisService.GetCoupon(paramSellerName, paramCouponName)
+		coupon := redisService.GetCoupon(paramCouponName)
 		// 交给[协程]完成数据库写入操作
 		SecKillChannel <- secKillMessage{user.Username, coupon}
 		// TODO:
@@ -51,52 +53,10 @@ func FetchCoupon(ctx *gin.Context)  {
 		println("Cache secKill error. " + err.Error())
 		// 可在此将err输出到log.
 	}
-
-	// ----此后是数据库实现的抢购----
-	// 查看是否有该优惠券，若没有，直接返回错误
-	/* coupon := model.Coupon{Username: paramSellerName, CouponName: paramCouponName}
-	err := data.Db.Where(&coupon).First(&coupon).Error
-	if err != nil {
-		outputQueryError(ctx, err)
-		return
-	}
-
-	// 用户没抢过，才能加入抢购
-	hasCoupon := model.Coupon{Username: user.Username, CouponName:paramCouponName}
-	err = data.Db.Where(&hasCoupon).First(&hasCoupon).Error
-	if err == nil || !gorm.IsRecordNotFoundError(err) {
-		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Customer has got the coupon."})
-		return
-	}
-
-	// 抢优惠券
-	updateExec := data.Db.Exec(fmt.Sprintf("UPDATE ginhello.coupons c SET c.left=c.left-1 WHERE " +
-		"c.username='%s' AND c.coupon_name='%s' AND c.left>0", paramSellerName, paramCouponName))
-	updateErr := updateExec.Error
-	updatedNum := updateExec.RowsAffected
-	if updateErr != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Get coupon failed. Db error."})
-		return
-	}
-	if updatedNum == 0 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Get coupon failed. No such coupon or no coupon rest."})
-		return
-	}
-
-	// 先直接返回
-	ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Please wait for the result."})
-
-	// 抢到后加入用户拥有的优惠券
-	userCoupon := model.Coupon{Username: user.Username, CouponName:paramCouponName,
-		Amount:1, Left:1, Stock:coupon.Stock, Description:coupon.Description}
-	err = data.Db.Create(&userCoupon).Error
-	if err != nil {
-		// 应再次尝试创建
-	} */
 }
 
 const (
-	couponPageSize = 20
+	couponPageSize int64 = 20
 )
 
 // 工具函数 输出查询错误
@@ -144,35 +104,61 @@ func GetCoupons(ctx *gin.Context) {
 		return
 	}
 
-	// 根据用户名查找他的优惠券
+	// 根据用户名查找其拥有/创建的优惠券
 	if queryUserName == user.Username {
-		// 查询名与用户名相同，返回查询名用户的优惠券
-		var coupons []model.Coupon
-		data.Db.Offset(page *couponPageSize).Limit(couponPageSize).
-			Find(&coupons, model.Coupon{Username:queryUserName})
+		// 查询名与用户名相同，返回查询名用户拥有的优惠券
+		var allCoupons []model.Coupon
+		var err error
+		if allCoupons, err = redisService.GetCoupons(user.Username); err != nil {
+			ctx.JSON(http.StatusInternalServerError, "Error on " + err.Error())
+		}
+
+		// 取得切片范围
+		couponLen := int64(len(allCoupons))
+		startIndex := page * couponPageSize
+		endIndex := page * couponPageSize + couponPageSize
+		if startIndex < 0 {
+			startIndex = 0
+		} else if startIndex > couponLen {
+			startIndex = couponLen
+		}
+		if endIndex < 0 {
+			endIndex = 0
+		} else if endIndex > couponLen {
+			endIndex = couponLen
+		}
+
+		coupons := allCoupons[startIndex:endIndex]
+
+		// 在数据库实现中用到以下语句
+		//data.Db.Offset(page *couponPageSize).Limit(couponPageSize).
+		//	Find(&coupons, model.Coupon{Username:queryUserName})
 
 		if queryUser.IsSeller() {
 			sellerCoupons := model.ParseSellerResCoupons(coupons)
-			ctx.JSON(http.StatusOK, sellerCoupons)
+			ctx.JSON(http.StatusOK, gin.H{errMsgKey: "", dataKey: sellerCoupons})
 			return
 		} else if queryUser.IsCustomer() {
 			customerCoupons := model.ParseCustomerResCoupons(coupons)
-			ctx.JSON(http.StatusOK, customerCoupons)
+			ctx.JSON(http.StatusOK, gin.H{errMsgKey: "", dataKey: customerCoupons})
 			return
 		}
 	} else {
 		// 查询名与用户名不同
 		if queryUser.IsCustomer() {
-			// 不可查询其它顾客
-			ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Cannot check other customer."})
+			// 不可查询其它顾客的优惠券
+			ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Cannot check other customer.", dataKey: []model.Coupon{}})
 			return
 		} else if queryUser.IsSeller() {
-			// 可以查询其它商家
+			// 可以查询其它商家拥有的优惠券
 			var coupons []model.Coupon
-			data.Db.Offset(page *couponPageSize).Limit(couponPageSize).
-				Find(&coupons, model.Coupon{Username:queryUserName})
+			var err error
+			if coupons, err = redisService.GetCoupons(user.Username); err != nil {
+				ctx.JSON(http.StatusInternalServerError,
+					gin.H{errMsgKey: "Error when getting seller's coupons", dataKey: coupons})
+			}
 			sellerCoupons := model.ParseSellerResCoupons(coupons)
-			ctx.JSON(http.StatusOK, sellerCoupons)
+			ctx.JSON(http.StatusOK, gin.H{errMsgKey: "", dataKey: sellerCoupons})
 			return
 		}
 	}
@@ -228,16 +214,16 @@ func AddCoupon(ctx *gin.Context) {
 		Stock:       stock,
 		Description: description,
 	}
-	err := data.Db.Create(&coupon).Error
+	var err error
+	err = data.Db.Create(&coupon).Error
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Create failed. Maybe (username,coupon name) duplicates"})
 		return
 	}
 
 	// 在Redis添加优惠券
-	res, err := redisService.CacheCoupon(coupon)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Create Cache failed. result: " + res})
+	if err = redisService.CacheCouponAndHasCoupon(coupon); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Create Cache failed. " + err.Error()})
 		return
 	}
 

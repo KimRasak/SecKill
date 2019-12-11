@@ -1,7 +1,6 @@
 package redisService
 
 import (
-	"SecKill/api/dbService"
 	"SecKill/data"
 	"SecKill/model"
 	"fmt"
@@ -10,25 +9,27 @@ import (
 
 
 // 获取"用户持有优惠券"的key
-func getHasCouponKeyByName(userName string, sellerName string, couponName string) string {
-	return fmt.Sprintf("%s-has-(%s,%s)", userName, sellerName, couponName)
+func getHasCouponsKeyByName(userName string) string {
+	return fmt.Sprintf("%s-has", userName)
 }
 
 // 获取"优惠券"的key
 func getCouponKeyByCoupon(coupon model.Coupon) string {
-	return getCouponKeyByName(coupon.Username, coupon.CouponName)
+	return getCouponKeyByName(coupon.CouponName)
 }
-func getCouponKeyByName(sellerName string, couponName string) string {
-	return fmt.Sprintf("(%s,%s)", sellerName, couponName)
+func getCouponKeyByName(couponName string) string {
+	return fmt.Sprintf("%s-info", couponName)
 }
 
-func CacheHasCoupon(username string, coupon model.Coupon) (string, error) {
-	key := getHasCouponKeyByName(username, coupon.Username, coupon.CouponName)
-	val, err := data.SetForever(key, 1)
+// 缓存用户拥有优惠券/商家创建优惠券的信息
+func CacheHasCoupon(coupon model.Coupon) (int64, error) {
+	key := getHasCouponsKeyByName(coupon.Username)
+	val, err := data.SetAdd(key, coupon.CouponName)
 	return val, err
 }
 
-func CacheFullCoupon(coupon model.Coupon) (string, error) {
+// 缓存优惠券的完整信息
+func CacheCoupon(coupon model.Coupon) (string, error) {
 	key := getCouponKeyByCoupon(coupon)
 	fields := map[string]interface{}{
 		"id": coupon.Id,
@@ -44,23 +45,18 @@ func CacheFullCoupon(coupon model.Coupon) (string, error) {
 }
 
 // 缓存优惠券
-func CacheCoupon(coupon model.Coupon) (string, error) {
-	user, err := dbService.GetUser(coupon.Username)
-	if err != nil {
-		println("Error when getting user.")
+func CacheCouponAndHasCoupon(coupon model.Coupon) error {
+	var err error
+	if _, err = CacheHasCoupon(coupon); err != nil {
+		return err
 	}
-	if user.IsCustomer() {
-		// 缓存拥有优惠券消息
-		return CacheHasCoupon(user.Username, coupon)
-	} else if user.IsSeller() {
-		// 缓存完整优惠券消息
-		return CacheFullCoupon(coupon)
-	}
-	panic(fmt.Sprintf("Wrong type of user. %s %d", user.Username, user.Kind))
+	_, err = CacheCoupon(coupon)
+	return err
 }
 
-func GetCoupon(sellerName string, couponName string) model.Coupon {
-	key := getCouponKeyByName(sellerName, couponName)
+// 从缓存获取优惠券
+func GetCoupon(couponName string) model.Coupon {
+	key := getCouponKeyByName(couponName)
 	values, err := data.GetMap(key, "id", "username", "couponName", "amount", "left", "stock", "description")
 	if err != nil {
 		println("Error on getting coupon. " + err.Error())
@@ -92,4 +88,20 @@ func GetCoupon(sellerName string, couponName string) model.Coupon {
 		Description: values[6].(string),
 	}
 
+}
+
+// 从缓存获取某个用户的所有优惠券
+func GetCoupons(userName string) ([]model.Coupon, error) {
+	var coupons []model.Coupon
+	hasCouponsKey := getHasCouponsKeyByName(userName)
+	couponNames, err := data.GetSetMembers(hasCouponsKey)
+	if err != nil {
+		println("Error when getting coupon members. " + err.Error())
+		return nil, err
+	}
+	for _, couponName := range couponNames {
+		coupon := GetCoupon(couponName)
+		coupons = append(coupons, coupon)
+	}
+	return coupons, nil
 }

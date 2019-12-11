@@ -7,14 +7,17 @@ import (
 
 const secKillScript = `
     --- Check if User has coupon ---
-	local userHasCoupon = redis.call("get", KEYS[1]);
-	if (userHasCoupon ~= false)
+    --- KEYS[1]: "{username}-has"
+    --- KEYS[2]: "{couponName}"
+    --- KEYS[3]: "{couponName}-info"
+	local userHasCoupon = redis.call("SISMEMBER", KEYS[1], KEYS[2]);
+	if (userHasCoupon == 1)
 	then
 		return -1;
 	end
 
     --- Check if coupon exists and is cached ---
-	local couponLeft = redis.call("hget", KEYS[2], "left");
+	local couponLeft = redis.call("hget", KEYS[3], "left");
 	if (couponLeft == false)
 	then
 		return -2;  --- No such coupon
@@ -25,8 +28,8 @@ const secKillScript = `
 	end
 	
     --- User gets the coupon ---
-	redis.call("hset", KEYS[2], "left", couponLeft - 1);
-	redis.call("set", KEYS[1], 1);
+	redis.call("hset", KEYS[3], "left", couponLeft - 1);
+	redis.call("SADD", KEYS[1], KEYS[2]);
 	return 1;
 `
 var secKillSHA string  // SHA expression of secKillScript
@@ -42,7 +45,7 @@ func preHeatKeys()  {
 	}
 
 	for _, coupon := range coupons {
-		_, err := CacheCoupon(coupon)
+		err := CacheCouponAndHasCoupon(coupon)
 		if err != nil {
 			panic("Error while setting redis keys of coupons. " + err.Error())
 		}
