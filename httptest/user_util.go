@@ -1,0 +1,59 @@
+package httptest
+
+import (
+	"SecKill/api"
+	"SecKill/model"
+	"github.com/gavv/httpexpect"
+	"net/http"
+)
+
+// 本文件存放了一些demo用户信息，demo用户的注册/登录函数
+// 还定义了注册/登录用户的表格
+
+const demoSellerName = "kiana"
+const demoCustomerName = "jinzili"
+const demoPassword = "shen6508"
+
+type RegisterForm struct {
+	Username string `form:"username"`
+	Password string `form:"password"`
+	Kind     int64  `form:"kind"`
+}
+
+type LoginForm struct {
+	Username string `form:"username"`
+	Password string `form:"password"`
+}
+
+func registerDemoUsers(e *httpexpect.Expect)  {
+	e.POST("/api/users/").
+		WithForm(RegisterForm{demoSellerName, demoPassword, int64(model.NormalSeller)}).
+		Expect().
+		Status(http.StatusOK).JSON().Object().
+		ValueEqual(api.ErrMsgKey, "")
+
+	e.POST("/api/users/").
+		WithForm(RegisterForm{demoCustomerName, demoPassword, int64(model.NormalCustomer)}).
+		Expect().
+		Status(http.StatusOK).JSON().Object().
+		ValueEqual(api.ErrMsgKey, "")
+}
+
+
+func demoCustomerLogin(e *httpexpect.Expect)  {
+	e.POST("/api/auth/").
+		WithForm(LoginForm{demoCustomerName, demoPassword}).
+		Expect().
+		Status(http.StatusOK).JSON().Object().
+		ValueEqual(api.ErrMsgKey, "").
+		ValueEqual("kind", model.NormalCustomer)
+}
+
+func demoSellerLogin(e *httpexpect.Expect)  {
+	e.POST("/api/auth/").
+		WithForm(LoginForm{demoSellerName, demoPassword}).
+		Expect().
+		Status(http.StatusOK).JSON().Object().
+		ValueEqual(api.ErrMsgKey, "").
+		ValueEqual("kind", model.NormalSeller)
+}

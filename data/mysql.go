@@ -41,6 +41,14 @@ func initMysql(config conf.AppConfig) {
 
 	// 创建表
 	tables := []interface{}{user, coupon}
+
+	if config.App.FlushAllForTest {
+		println("FlushAllForTest is true. Delete records of all tables.")
+		for _, table := range tables {
+			Db.Delete(table)
+		}
+	}
+
 	for _, table := range tables {
 		if !Db.HasTable(table) {
 			Db.AutoMigrate(table)

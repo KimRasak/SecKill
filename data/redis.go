@@ -14,6 +14,17 @@ func initRedisConnection(config conf.AppConfig)  {
 		Password: config.App.Redis.Password, // It's ok if password is "".
 		DB:       0,  // use default DB
 	})
+
+	if config.App.FlushAllForTest {
+		if _, err := FlushAll(); err != nil {
+			println("Error when flushAll. " + err.Error())
+		}
+	}
+}
+
+// 用于测试
+func FlushAll() (string, error) {
+	return client.FlushAll().Result()
 }
 
 // 确保redis加载lua脚本，若未加载则加载

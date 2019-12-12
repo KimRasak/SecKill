@@ -12,22 +12,23 @@ import (
 	"strconv"
 )
 
-const errMsgKey = "errMsg"
-const dataKey = "data"
+// Visible for testing
+const ErrMsgKey = "errMsg"
+const DataKey = "data"
 
 
 // 秒杀优惠券
-func FetchCoupon(ctx *gin.Context)  {
+func FetchCoupon(ctx *gin.Context)  	{
 	// 登陆检查
 	session := sessions.Default(ctx)
 	sessionUser := session.Get("user")
 	if sessionUser == nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Not Logged in."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Logged in."})
 		return
 	}
 	user := sessionUser.(*model.User)
 	if user.IsSeller() {
-		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Sellers aren't allowed to get coupons."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Sellers aren't allowed to get coupons."})
 		return
 	}
 
@@ -48,7 +49,7 @@ func FetchCoupon(ctx *gin.Context)  {
 		// 2. 将数据库里优惠券的库存-1
 		// 可以建立一个带缓冲的channel
 		// 传输的信息要包含user.Username, paramSellerName, paramCouponName
-		ctx.JSON(http.StatusOK, gin.H{errMsgKey: ""})
+		ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: ""})
 	} else {
 		println("Cache secKill error. " + err.Error())
 		// 可在此将err输出到log.
@@ -62,9 +63,9 @@ const (
 // 工具函数 输出查询错误
 func outputQueryError(ctx *gin.Context, err error) {
 	if gorm.IsRecordNotFoundError(err) {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Record not found."})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Record not found."})
 	} else {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Query error."})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Query error."})
 	}
 }
 
@@ -136,18 +137,18 @@ func GetCoupons(ctx *gin.Context) {
 
 		if queryUser.IsSeller() {
 			sellerCoupons := model.ParseSellerResCoupons(coupons)
-			ctx.JSON(http.StatusOK, gin.H{errMsgKey: "", dataKey: sellerCoupons})
+			ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: "", DataKey: sellerCoupons})
 			return
 		} else if queryUser.IsCustomer() {
 			customerCoupons := model.ParseCustomerResCoupons(coupons)
-			ctx.JSON(http.StatusOK, gin.H{errMsgKey: "", dataKey: customerCoupons})
+			ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: "", DataKey: customerCoupons})
 			return
 		}
 	} else {
 		// 查询名与用户名不同
 		if queryUser.IsCustomer() {
 			// 不可查询其它顾客的优惠券
-			ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Cannot check other customer.", dataKey: []model.Coupon{}})
+			ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Cannot check other customer.", DataKey: []model.Coupon{}})
 			return
 		} else if queryUser.IsSeller() {
 			// 可以查询其它商家拥有的优惠券
@@ -155,10 +156,10 @@ func GetCoupons(ctx *gin.Context) {
 			var err error
 			if coupons, err = redisService.GetCoupons(user.Username); err != nil {
 				ctx.JSON(http.StatusInternalServerError,
-					gin.H{errMsgKey: "Error when getting seller's coupons", dataKey: coupons})
+					gin.H{ErrMsgKey: "Error when getting seller's coupons", DataKey: coupons})
 			}
 			sellerCoupons := model.ParseSellerResCoupons(coupons)
-			ctx.JSON(http.StatusOK, gin.H{errMsgKey: "", dataKey: sellerCoupons})
+			ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: "", DataKey: sellerCoupons})
 			return
 		}
 	}
@@ -171,12 +172,12 @@ func AddCoupon(ctx *gin.Context) {
 	session := sessions.Default(ctx)
 	sessionUser := session.Get("user")
 	if sessionUser == nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Not Logged in."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Logged in."})
 		return
 	}
 	user := sessionUser.(*model.User)
 	if !user.IsSeller() {
-		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Only sellers can create coupons."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Only sellers can create coupons."})
 		return
 	}
 
@@ -187,21 +188,21 @@ func AddCoupon(ctx *gin.Context) {
 	description := ctx.PostForm("description")
 	formStock := ctx.PostForm("stock")
 	if user.Username != paramUserName {
-		ctx.JSON(http.StatusUnauthorized, gin.H{errMsgKey: "Cannot create coupons for other users."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Cannot create coupons for other users."})
 		return
 	}
 	amount, amountErr := strconv.ParseInt(formAmount, 10, 64)
 	if amountErr != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Amount field wrong format."})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Amount field wrong format."})
 		return
 	}
 	stock, stockErr := strconv.ParseInt(formStock, 10, 64)
 	if stockErr != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Stock field wrong format."})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Stock field wrong format."})
 		return
 	}
 	if len(couponName) == 0 || len(description) == 0 {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Coupon name or description should not be empty."})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Coupon name or description should not be empty."})
 		return
 	}
 
@@ -217,17 +218,17 @@ func AddCoupon(ctx *gin.Context) {
 	var err error
 	err = data.Db.Create(&coupon).Error
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Create failed. Maybe (username,coupon name) duplicates"})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Create failed. Maybe (username,coupon name) duplicates"})
 		return
 	}
 
 	// 在Redis添加优惠券
 	if err = redisService.CacheCouponAndHasCoupon(coupon); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Create Cache failed. " + err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Create Cache failed. " + err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{errMsgKey: ""})
+	ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: ""})
 	return
 
 }
@@ -239,22 +240,22 @@ func RegisterUser(ctx *gin.Context) {
 	// 查看参数长度、是否为空、格式
 	var kind int64
 	if len(postUserName) < model.MinUserNameLen {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "User name too short."})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "User name too short."})
 		return
 	} else if len(postPassword) < model.MinPasswordLen {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Password too short."})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Password too short."})
 		return
 	} else if postKind == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Empty field of kind."})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Empty field of kind."})
 		return
 	} else {
 		var err error
 		kind, err = strconv.ParseInt(postKind, 10, 64)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Bad form of kind."})
+			ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Bad form of kind."})
 			return
 		} else if !model.IsValidKind(kind) {
-			ctx.JSON(http.StatusBadRequest, gin.H{errMsgKey: "Unexpected value of kind, " + postKind})
+			ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Unexpected value of kind, " + postKind})
 			return
 		}
 	}
@@ -264,10 +265,10 @@ func RegisterUser(ctx *gin.Context) {
 	user := model.User{Username: username, Kind: kind, Password: password}
 	err := data.Db.Create(&user).Error
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{errMsgKey: "Insert user failed. Maybe user name duplicates."})
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Insert user failed. Maybe user name duplicates."})
 		return
 	} else {
-		ctx.JSON(http.StatusOK, gin.H{errMsgKey: ""})
+		ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: ""})
 		return
 	}
 }

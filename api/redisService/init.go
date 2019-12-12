@@ -34,8 +34,6 @@ const secKillScript = `
 `
 var secKillSHA string  // SHA expression of secKillScript
 
-
-
 // 将数据加载到缓存预热，防止缓存穿透
 // 预热加载了商品库存key
 func preHeatKeys()  {
@@ -50,7 +48,7 @@ func preHeatKeys()  {
 			panic("Error while setting redis keys of coupons. " + err.Error())
 		}
 	}
-	print("Set redis keys of coupons success.")
+	println("---Set redis keys of coupons success.---")
 }
 
 func init() {

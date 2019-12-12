@@ -8,8 +8,8 @@ import (
 const (
 	MinUserNameLen = 4
 	MinPasswordLen = 4
-	NormalCustomer = 0
-	NormalSeller   = 1
+	NormalCustomer = 1
+	NormalSeller   = 2
 )
 type User struct {
 	Id       int     `gorm:"primary_key;auto_increment"`

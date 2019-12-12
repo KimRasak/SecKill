@@ -20,13 +20,13 @@ func LoginAuth(ctx *gin.Context)  {
 	err := data.Db.Where(&queryUser).
 		First(&queryUser).Error
 	if err != nil && gorm.IsRecordNotFoundError(err) {
-		ctx.JSON(http.StatusBadRequest, gin.H{kindKey: "", errMsgKey: "No such queryUser."})
+		ctx.JSON(http.StatusBadRequest, gin.H{kindKey: "", ErrMsgKey: "No such queryUser."})
 		return
 	}
 
 	// 匹配密码
 	if queryUser.Password != password {
-		ctx.JSON(http.StatusBadRequest, gin.H{kindKey: queryUser.Kind, errMsgKey: "Password mismatched."})
+		ctx.JSON(http.StatusBadRequest, gin.H{kindKey: queryUser.Kind, ErrMsgKey: "Password mismatched."})
 		return
 	}
 
@@ -36,10 +36,10 @@ func LoginAuth(ctx *gin.Context)  {
 	session.Set("user", user)
 	err = session.Save()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{kindKey: queryUser.Kind, errMsgKey: "Save session failed."})
+		ctx.JSON(http.StatusInternalServerError, gin.H{kindKey: queryUser.Kind, ErrMsgKey: "Save session failed."})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{kindKey: queryUser.Kind, errMsgKey: ""})
+	ctx.JSON(http.StatusOK, gin.H{kindKey: queryUser.Kind, ErrMsgKey: ""})
 	return
 }

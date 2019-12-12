@@ -1,12 +1,12 @@
 package conf
 
 import (
-	"io/ioutil"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"log"
 )
 
-const configFilePath string = "config-dev.yaml"
+const configFilePath string = "config-test.yaml"
 
 var configFile []byte
 
@@ -17,6 +17,7 @@ type AppConfig struct {
 type App struct {
 	Database Database `yaml:"database"`
 	Redis Redis `yaml:"redis"`
+	FlushAllForTest bool `yaml:"flushAllForTest"`
 }
 
 type Database struct {
