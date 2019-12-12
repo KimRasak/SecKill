@@ -4,6 +4,7 @@ import (
 	"SecKill/api"
 	"github.com/gavv/httpexpect"
 	"net/http"
+	"strconv"
 )
 
 /*
@@ -21,10 +22,13 @@ type AddCouponForm struct {
 }
 
 // 定义了demo优惠券
+var demoCouponName = "my_coupon"
+var demoAmount     = 10
+var demoStock      = 50
 var demoAddCouponForm AddCouponForm = AddCouponForm{
-	Name:        "my_coupon",
-	Amount:      "10",
-	Stock:       "50",
+	Name:        demoCouponName,
+	Amount:      strconv.Itoa(demoAmount) ,
+	Stock:       strconv.Itoa(demoStock),
 	Description: "kiana: this is my good coupon",
 }
 

@@ -36,7 +36,6 @@ func FetchCoupon(ctx *gin.Context)  	{
 	paramCouponName := ctx.Param("name")
 
 	// ---用户抢优惠券。后面需要高并发处理---
-
 	// 先在缓存执行原子性的秒杀操作。将原子性地完成"判断能否秒杀-执行秒杀"的步骤
 	secKillRes, err := redisService.CacheAtomicSecKill(user.Username, paramSellerName, paramCouponName)
 	if err == nil {
@@ -44,18 +43,15 @@ func FetchCoupon(ctx *gin.Context)  	{
 		coupon := redisService.GetCoupon(paramCouponName)
 		// 交给[协程]完成数据库写入操作
 		SecKillChannel <- secKillMessage{user.Username, coupon}
-		// TODO:
-		// 1. 把用户拥有优惠券的行为存到数据库
-		// 2. 将数据库里优惠券的库存-1
-		// 可以建立一个带缓冲的channel
-		// 传输的信息要包含user.Username, paramSellerName, paramCouponName
 		ctx.JSON(http.StatusCreated, gin.H{ErrMsgKey: ""})
 	} else {
-		// TODO:
-		// 204表示未抢到，需要在errMsg说明理由
-		// 5xx表示服务端错误
-		ctx.JSON(http.StatusNoContent, gin.H{ErrMsgKey: err.Error()})
-		println("Cache secKill error. " + err.Error())
+		if redisService.IsRedisEvalError(err) {
+			ctx.JSON(http.StatusInternalServerError, gin.H{ErrMsgKey: err.Error()})
+			println("Server error" + err.Error())
+		} else {
+			ctx.JSON(http.StatusNoContent, gin.H{ErrMsgKey: err.Error()})
+			println("Fail to fetch coupon. " + err.Error())
+		}
 		// 可在此将err输出到log.
 	}
 }

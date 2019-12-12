@@ -54,6 +54,13 @@ func (e CouponLeftResError) Error() string {
 	}
 }
 
+func IsRedisEvalError(err error) bool {
+	switch err.(type) {
+	case redisEvalError: return true
+	default: return false
+	}
+}
+
 // 尝试在redis进行原子性的秒杀操作
 func CacheAtomicSecKill(userName string, sellerName string, couponName string) (int64, error) {
 	// 根据sha，执行预先加载的秒杀lua脚本

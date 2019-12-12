@@ -13,6 +13,7 @@ import (
 
 const demoSellerName = "kiana"
 const demoCustomerName = "jinzili"
+const demoArCustomerName = "karsa"  // name of another customer
 const demoPassword = "shen6508"
 
 type RegisterForm struct {
@@ -38,12 +39,29 @@ func registerDemoUsers(e *httpexpect.Expect)  {
 		Expect().
 		Status(http.StatusOK).JSON().Object().
 		ValueEqual(api.ErrMsgKey, "")
+
+
+	e.POST("/api/users/").
+		WithForm(RegisterForm{demoArCustomerName, demoPassword, model.NormalCustomer}).
+		Expect().
+		Status(http.StatusOK).JSON().Object().
+		ValueEqual(api.ErrMsgKey, "")
+
 }
 
 
 func demoCustomerLogin(e *httpexpect.Expect)  {
 	e.POST("/api/auth/").
 		WithForm(LoginForm{demoCustomerName, demoPassword}).
+		Expect().
+		Status(http.StatusOK).JSON().Object().
+		ValueEqual(api.ErrMsgKey, "").
+		ValueEqual("kind", model.NormalCustomer)
+}
+
+func demoArCustomerLogin(e *httpexpect.Expect)  {
+	e.POST("/api/auth/").
+		WithForm(LoginForm{demoArCustomerName, demoPassword}).
 		Expect().
 		Status(http.StatusOK).JSON().Object().
 		ValueEqual(api.ErrMsgKey, "").

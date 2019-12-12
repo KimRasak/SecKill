@@ -2,6 +2,7 @@ package httptest
 
 import (
 	"SecKill/api"
+	"SecKill/model"
 	"fmt"
 	"github.com/gavv/httpexpect"
 	"net/http"
@@ -72,17 +73,32 @@ func isNonEmptyCoupons(e *httpexpect.Expect, username string, page int) {
 		Value("data").Array().Length().Gt(0)
 }
 
+func isGetCouponUnauthorized(e *httpexpect.Expect, username string, page int) {
+	jsonObject := e.GET(getCouponPath, username).
+		WithQuery(pageQueryKey, page).
+		Expect().
+		Status(http.StatusUnauthorized).JSON().Object()
+	jsonObject.Value(api.ErrMsgKey).Equal("Cannot check other customer.")
+	jsonObject.Value(api.DataKey).Equal([]model.Coupon{})
+
+}
+
 // 验证符合顾客的格式
 func isCustomerSchema(e *httpexpect.Expect, username string, page int) {
-	e.GET(getCouponPath, username).
-		WithQuery(pageQueryKey, page).
+	e.GET(getCouponPath, username).WithQuery(pageQueryKey, page).
 		Expect().JSON().Schema(customerSchema)
 
 }
 
 // 验证符合商家的格式
 func isSellerSchema(e *httpexpect.Expect, username string, page int) {
-	e.GET(getCouponPath, username).
-		WithQuery(pageQueryKey, page).
+	e.GET(getCouponPath, username).WithQuery(pageQueryKey, page).
 		Expect().JSON().Schema(sellerSchema)
+}
+
+// 验证优惠券的剩余量与预期一致
+func isCouponExpectedLeft(e *httpexpect.Expect, username string, page int, index int, expectedLeft int)  {
+	e.GET(getCouponPath, username).WithQuery(pageQueryKey, page).
+		Expect().JSON().Object().Value(api.DataKey).Array().
+		Element(index).Object().Value("left").Equal(expectedLeft)
 }
