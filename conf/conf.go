@@ -48,6 +48,6 @@ func init()  {
 	var err error
 	configFile, err = ioutil.ReadFile(configFilePath)
 	if err != nil {
-		log.Fatalf("yamlFile.Get err %v", err)
+		log.Fatalf("yamlFile. Get err %v", err)
 	}
 }

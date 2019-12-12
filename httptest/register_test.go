@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 const registerUserPath = "/api/users/"
@@ -18,7 +19,21 @@ func startServer(t *testing.T) (*httptest.Server, *httpexpect.Expect) {
 	server := httptest.NewServer(engine.SeckillEngine())
 
 	// 通过server创建测试引擎
-	return server, httpexpect.New(t, server.URL)
+	return server, httpexpect.WithConfig(httpexpect.Config{
+		BaseURL: server.URL,
+		Reporter: httpexpect.NewAssertReporter(t),
+
+		// use http.Client with a cookie jar and timeout
+		Client: &http.Client{
+			Jar:     httpexpect.NewJar(),
+			Timeout: time.Second * 30,
+		},
+		// use verbose logging
+		Printers: []httpexpect.Printer{
+			httpexpect.NewCurlPrinter(t),
+			httpexpect.NewDebugPrinter(t, true),
+		},
+	})
 }
 
 func testFormat(e *httpexpect.Expect) {
@@ -69,19 +84,13 @@ func testFormat(e *httpexpect.Expect) {
 		ValueEqual(api.ErrMsgKey, "Empty field of kind.")
 
 	// 用户类型不存在
-	impossibleKind := "-11"
+	impossibleKind := "ImpossibleKind"
 	e.POST(registerUserPath).
 		WithForm(BadKindRegisterForm{longUserName, longPassword, impossibleKind}).
 		Expect().
 		Status(http.StatusBadRequest).JSON().Object().
 		ValueEqual(api.ErrMsgKey, "Unexpected value of kind, " + impossibleKind)
 
-	// 用户类型不是数字
-	e.POST(registerUserPath).
-		WithForm(BadKindRegisterForm{longUserName, longPassword, "bad kind"}).
-		Expect().
-		Status(http.StatusBadRequest).JSON().Object().
-		ValueEqual(api.ErrMsgKey, "Bad form of kind.")
 }
 
 func testDuplicateRegisterSeller(e *httpexpect.Expect) {

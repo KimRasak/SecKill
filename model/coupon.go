@@ -1,9 +1,5 @@
 package model
 
-const (
-	USER_MAX_AMOUNT = 1
-)
-
 // 数据库实体
 type Coupon struct {
 	Id          int64     `gorm:"primary_key;auto_increment"`
@@ -24,8 +20,8 @@ type ResCoupon struct {
 // 商家查询优惠券时，返回的数据结构
 type SellerResCoupon struct {
 	ResCoupon
-	TotalAmount int64  `json:"total_amount"`
-	Left        int64  `json:"left"`
+	Amount int64 `json:"amount"`
+	Left   int64 `json:"left"`
 }
 
 // 顾客查询优惠券时，返回的数据结构

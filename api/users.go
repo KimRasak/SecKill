@@ -73,6 +73,37 @@ func outputQueryError(ctx *gin.Context, err error) {
 	}
 }
 
+// 取得合理切片范围的coupons
+func getValidCouponSlice(allCoupons []model.Coupon, page int64) []model.Coupon {
+	if len(allCoupons) == 0 {
+		return allCoupons
+	}
+	couponLen := int64(len(allCoupons))
+	startIndex := page * couponPageSize
+	endIndex := page * couponPageSize + couponPageSize
+	if startIndex < 0 {
+		startIndex = 0
+	} else if startIndex > couponLen {
+		startIndex = couponLen
+	}
+	if endIndex < 1 {
+		endIndex = 1
+	} else if endIndex > couponLen {
+		endIndex = couponLen
+	}
+
+	return allCoupons[startIndex:endIndex]
+}
+
+// 数据长度为空则返回204,否则返回200
+func getDataStatusCode(len int) int {
+	if len == 0 {
+		return http.StatusNoContent
+	} else {
+		return http.StatusOK
+	}
+}
+
 // 查询用户的优惠券
 func GetCoupons(ctx *gin.Context) {
 	// 登陆检查
@@ -119,34 +150,17 @@ func GetCoupons(ctx *gin.Context) {
 			return
 		}
 
-		// 取得切片范围
-		couponLen := int64(len(allCoupons))
-		startIndex := page * couponPageSize
-		endIndex := page * couponPageSize + couponPageSize
-		if startIndex < 0 {
-			startIndex = 0
-		} else if startIndex > couponLen {
-			startIndex = couponLen
-		}
-		if endIndex < 0 {
-			endIndex = 0
-		} else if endIndex > couponLen {
-			endIndex = couponLen
-		}
-
-		coupons := allCoupons[startIndex:endIndex]
-
-		// 在数据库实现中用到以下语句
-		//data.Db.Offset(page *couponPageSize).Limit(couponPageSize).
-		//	Find(&coupons, model.Coupon{Username:queryUserName})
+		coupons := getValidCouponSlice(allCoupons, page)
 
 		if queryUser.IsSeller() {
 			sellerCoupons := model.ParseSellerResCoupons(coupons)
-			ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: "", DataKey: sellerCoupons})
+			statusCode := getDataStatusCode(len(sellerCoupons))
+			ctx.JSON(statusCode, gin.H{ErrMsgKey: "", DataKey: sellerCoupons})
 			return
 		} else if queryUser.IsCustomer() {
 			customerCoupons := model.ParseCustomerResCoupons(coupons)
-			ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: "", DataKey: customerCoupons})
+			statusCode := getDataStatusCode(len(customerCoupons))
+			ctx.JSON(statusCode, gin.H{ErrMsgKey: "", DataKey: customerCoupons})
 			return
 		}
 	} else {
@@ -157,14 +171,17 @@ func GetCoupons(ctx *gin.Context) {
 			return
 		} else if queryUser.IsSeller() {
 			// 可以查询其它商家拥有的优惠券
-			var coupons []model.Coupon
+			var allCoupons []model.Coupon
 			var err error
-			if coupons, err = redisService.GetCoupons(user.Username); err != nil {
+			if allCoupons, err = redisService.GetCoupons(queryUserName); err != nil {
 				ctx.JSON(http.StatusInternalServerError,
-					gin.H{ErrMsgKey: "Error when getting seller's coupons", DataKey: coupons})
+					gin.H{ErrMsgKey: "Error when getting seller's coupons", DataKey: allCoupons})
 			}
+			coupons := getValidCouponSlice(allCoupons, page)
+
 			sellerCoupons := model.ParseSellerResCoupons(coupons)
-			ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: "", DataKey: sellerCoupons})
+			statusCode := getDataStatusCode(len(sellerCoupons))
+			ctx.JSON(statusCode, gin.H{ErrMsgKey: "", DataKey: sellerCoupons})
 			return
 		}
 	}
@@ -187,7 +204,7 @@ func AddCoupon(ctx *gin.Context) {
 	}
 
 	// 检查参数
-	paramUserName := ctx.Param("username")
+	paramUserName := ctx.Param("username")  // 注意: 该参数是网址路径参数
 	couponName := ctx.PostForm("name")
 	formAmount := ctx.PostForm("amount")
 	description := ctx.PostForm("description")
@@ -243,7 +260,7 @@ func RegisterUser(ctx *gin.Context) {
 	postUserName, postKind, postPassword := ctx.PostForm("username"), ctx.PostForm("kind"), ctx.PostForm("password")
 
 	// 查看参数长度、是否为空、格式
-	var kind int64
+	kind := postKind
 	if len(postUserName) < model.MinUserNameLen {
 		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "User name too short."})
 		return
@@ -254,12 +271,7 @@ func RegisterUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Empty field of kind."})
 		return
 	} else {
-		var err error
-		kind, err = strconv.ParseInt(postKind, 10, 64)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Bad form of kind."})
-			return
-		} else if !model.IsValidKind(kind) {
+		if !model.IsValidKind(kind) {
 			ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Unexpected value of kind, " + postKind})
 			return
 		}
