@@ -11,6 +11,13 @@ type Coupon struct {
 	Description string  `gorm:"type:varchar(60)"`             // 优惠券描述信息
 }
 
+type ReqCoupon struct {
+	Name			string
+	Amount 			int64
+	Description     string
+	Stock           int64
+}
+
 type ResCoupon struct {
 	Name            string  `json:"name"`
 	Stock           int64     `json:"stock"`

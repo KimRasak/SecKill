@@ -14,11 +14,14 @@ import "SecKill/data"
 const kindKey = "kind"
 // 用户登录
 func LoginAuth(ctx *gin.Context)  {
-	username := ctx.PostForm("username")
-	password := model.GetMD5(ctx.PostForm("password"))
+	var postUser model.LoginUser
+	if err := ctx.BindJSON(&postUser); err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: "", ErrMsgKey: "Only receive JSON format."})
+		return
+	}
 
 	// 查找该用户
-	queryUser := model.User{Username: username}
+	queryUser := model.User{Username: postUser.Username}
 	err := data.Db.Where(&queryUser).
 		First(&queryUser).Error
 	if err != nil && gorm.IsRecordNotFoundError(err) {
@@ -27,7 +30,7 @@ func LoginAuth(ctx *gin.Context)  {
 	}
 
 	// 匹配密码
-	if queryUser.Password != password {
+	if queryUser.Password != model.GetMD5(postUser.Password) {
 		ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: queryUser.Kind, ErrMsgKey: "Password mismatched."})
 		return
 	}

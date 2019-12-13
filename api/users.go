@@ -100,7 +100,7 @@ func getDataStatusCode(len int) int {
 	}
 }
 
-// 查询用户的优惠券
+// 查询优惠券
 func GetCoupons(ctx *gin.Context) {
 	// 登陆检查
 	session := sessions.Default(ctx)
@@ -186,6 +186,7 @@ func GetCoupons(ctx *gin.Context) {
 
 // 商家添加优惠券
 func AddCoupon(ctx *gin.Context) {
+	// TODO: 添加认证token在请求头
 	// 登陆检查
 	session := sessions.Default(ctx)
 	sessionUser := session.Get("user")
@@ -200,29 +201,41 @@ func AddCoupon(ctx *gin.Context) {
 	}
 
 	// 检查参数
+
 	paramUserName := ctx.Param("username")  // 注意: 该参数是网址路径参数
-	couponName := ctx.PostForm("name")
-	formAmount := ctx.PostForm("amount")
-	description := ctx.PostForm("description")
-	formStock := ctx.PostForm("stock")
+	var postCoupon model.ReqCoupon
+	if err := ctx.BindJSON(&postCoupon); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Only receive JSON format."})
+		return
+	}
+	couponName := postCoupon.Name
+	formAmount := postCoupon.Amount
+	description := postCoupon.Description
+	formStock := postCoupon.Stock
 	if user.Username != paramUserName {
 		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Cannot create coupons for other users."})
 		return
 	}
-	amount, amountErr := strconv.ParseInt(formAmount, 10, 64)
-	if amountErr != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Amount field wrong format."})
-		return
-	}
-	stock, stockErr := strconv.ParseInt(formStock, 10, 64)
-	if stockErr != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Stock field wrong format."})
-		return
-	}
-	if len(couponName) == 0 || len(description) == 0 {
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Coupon name or description should not be empty."})
-		return
-	}
+	amount := formAmount
+	// TODO: 检查int的范围合法性
+	//amount, amountErr := strconv.ParseInt(formAmount, 10, 64)
+	//if amountErr != nil {
+	//	ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Amount field wrong format."})
+	//	return
+	//}
+	stock := formStock
+	// TODO: 检查stock的范围合法性
+	//stock, stockErr := strconv.ParseInt(formStock, 10, 64)
+	//if stockErr != nil {
+	//	ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Stock field wrong format."})
+	//	return
+	//}
+
+	// 优惠券描述可以为空的，不需要检查长度
+	//if len(couponName) == 0 || len(description) == 0 {
+	//	ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Coupon name or description should not be empty."})
+	//	return
+	//}
 
 	// 在数据库添加优惠券
 	coupon := model.Coupon{
@@ -253,29 +266,28 @@ func AddCoupon(ctx *gin.Context) {
 
 // 用户注册
 func RegisterUser(ctx *gin.Context) {
-	postUserName, postKind, postPassword := ctx.PostForm("username"), ctx.PostForm("kind"), ctx.PostForm("password")
-
+	var postUser model.RegisterUser
+	if err := ctx.BindJSON(&postUser); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Only receive JSON format."})
+		return
+	}
 	// 查看参数长度、是否为空、格式
-	kind := postKind
-	if len(postUserName) < model.MinUserNameLen {
+	if len(postUser.Username) < model.MinUserNameLen {
 		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "User name too short."})
 		return
-	} else if len(postPassword) < model.MinPasswordLen {
+	} else if len(postUser.Password) < model.MinPasswordLen {
 		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Password too short."})
 		return
-	} else if postKind == "" {
+	} else if postUser.Kind == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Empty field of kind."})
 		return
-	} else {
-		if !model.IsValidKind(kind) {
-			ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Unexpected value of kind, " + postKind})
+	} else if !model.IsValidKind(postUser.Kind) {
+			ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Unexpected value of kind, " + postUser.Kind})
 			return
-		}
 	}
 
 	// 插入用户
-	username, password := postUserName, model.GetMD5(postPassword)
-	user := model.User{Username: username, Kind: kind, Password: password}
+	user := model.User{Username: postUser.Username, Kind: postUser.Kind, Password: model.GetMD5(postUser.Password)}
 	err := data.Db.Create(&user).Error
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Insert user failed. Maybe user name duplicates."})

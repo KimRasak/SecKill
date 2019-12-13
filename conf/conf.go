@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-const configFilePath string = "config-test.yaml"
+const configFilePath string = "config-dev.yaml"
 
 var configFile []byte
 

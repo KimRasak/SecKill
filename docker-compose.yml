@@ -4,7 +4,7 @@ services:
     image: mysql:5.7
     ports:
       - "3306:3306"
-    restart: 'no'
+    restart: 'always'
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
       MYSQL_DATABASE: "dev"
@@ -15,9 +15,9 @@ services:
     command: redis-server --requirepass 123456
     ports:
       - "6379:6379"
-    restart: 'no'
+    restart: 'always'
   seckill:
-    restart: 'no'
+    restart: 'always'
     build: ./
     ports:
       - "8000:8000"
