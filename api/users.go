@@ -5,11 +5,11 @@ import (
 	"SecKill/data"
 	"SecKill/model"
 	"fmt"
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"net/http"
 	"strconv"
+	myjwt "SecKill/middleware/jwt"
 )
 
 // Visible for testing
@@ -19,15 +19,14 @@ const DataKey = "data"
 
 // 秒杀优惠券
 func FetchCoupon(ctx *gin.Context)  	{
-	// 登陆检查
-	session := sessions.Default(ctx)
-	sessionUser := session.Get("user")
-	if sessionUser == nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Logged in."})
+	// 登陆检查token
+	claims := ctx.MustGet("claims").(*myjwt.CustomClaims)
+	if claims == nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Authorized."})
 		return
 	}
-	user := sessionUser.(*model.User)
-	if user.IsSeller() {
+
+	if claims.Kind == "saler"{//user.IsSeller() {
 		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Sellers aren't allowed to get coupons."})
 		return
 	}
@@ -37,12 +36,12 @@ func FetchCoupon(ctx *gin.Context)  	{
 
 	// ---用户抢优惠券。后面需要高并发处理---
 	// 先在缓存执行原子性的秒杀操作。将原子性地完成"判断能否秒杀-执行秒杀"的步骤
-	secKillRes, err := redisService.CacheAtomicSecKill(user.Username, paramSellerName, paramCouponName)
+	secKillRes, err := redisService.CacheAtomicSecKill(claims.Username, paramSellerName, paramCouponName)
 	if err == nil {
 		print(fmt.Sprintf("result: %d", secKillRes))
 		coupon := redisService.GetCoupon(paramCouponName)
 		// 交给[协程]完成数据库写入操作
-		SecKillChannel <- secKillMessage{user.Username, coupon}
+		SecKillChannel <- secKillMessage{claims.Username, coupon}
 		ctx.JSON(http.StatusCreated, gin.H{ErrMsgKey: ""})
 	} else {
 		if redisService.IsRedisEvalError(err) {
@@ -83,11 +82,14 @@ func getValidCouponSlice(allCoupons []model.Coupon, page int64) []model.Coupon {
 		startIndex = couponLen
 	}
 	if endIndex < 1 {
-		endIndex = 1
+		if couponLen < couponPageSize {
+			endIndex = couponLen
+		} else {
+			endIndex = couponPageSize
+		}
 	} else if endIndex > couponLen {
 		endIndex = couponLen
 	}
-
 	return allCoupons[startIndex:endIndex]
 }
 
@@ -102,29 +104,31 @@ func getDataStatusCode(len int) int {
 
 // 查询优惠券
 func GetCoupons(ctx *gin.Context) {
-	// 登陆检查
-	session := sessions.Default(ctx)
-	sessionUser := session.Get("user")
-	if sessionUser == nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Logged in."})
+	// 登陆检查token
+	claims := ctx.MustGet("claims").(*myjwt.CustomClaims)
+	if claims == nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Authorized."})
 		return
 	}
-	user := sessionUser.(*model.User)
 
 	queryUserName, queryPage := ctx.Param("username"), ctx.Query("page")
 
-	// 检查page参数
+	// 检查page参数, TODO：全部下标改为从1开始
 	var page int64
+	var tmpPage int64
 	if queryPage == "" {
-		page = 0
+		tmpPage = 1
 	} else {
 		var err error
-		page, err = strconv.ParseInt(ctx.Query("page"), 10, 64)
+		tmpPage, err = strconv.ParseInt(ctx.Query("page"), 10, 64)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Wrong format of page."})
 			return
 		}
 	}
+
+	// 数据库从0开始，但是查找从1开始
+	page = tmpPage - 1
 
 	fmt.Printf("Querying coupon with name %s, page %d\n", queryUserName, page)
 	// 查找对应用户
@@ -137,11 +141,11 @@ func GetCoupons(ctx *gin.Context) {
 	}
 
 	// 根据用户名查找其拥有/创建的优惠券
-	if queryUserName == user.Username {
+	if queryUserName == claims.Username {
 		// 查询名与用户名相同，返回查询名用户拥有的优惠券
 		var allCoupons []model.Coupon
 		var err error
-		if allCoupons, err = redisService.GetCoupons(user.Username); err != nil {
+		if allCoupons, err = redisService.GetCoupons(claims.Username); err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{ErrMsgKey: "Server error"})
 			return
 		}
@@ -186,16 +190,15 @@ func GetCoupons(ctx *gin.Context) {
 
 // 商家添加优惠券
 func AddCoupon(ctx *gin.Context) {
-	// TODO: 添加认证token在请求头
-	// 登陆检查
-	session := sessions.Default(ctx)
-	sessionUser := session.Get("user")
-	if sessionUser == nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Logged in."})
+	// 登陆检查token
+	claims := ctx.MustGet("claims").(*myjwt.CustomClaims)
+	if claims == nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Authorized."})
 		return
 	}
-	user := sessionUser.(*model.User)
-	if !user.IsSeller() {
+
+
+	if claims.Kind == "customer"{//!user.IsSeller() {
 		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Only sellers can create coupons."})
 		return
 	}
@@ -212,7 +215,7 @@ func AddCoupon(ctx *gin.Context) {
 	formAmount := postCoupon.Amount
 	description := postCoupon.Description
 	formStock := postCoupon.Stock
-	if user.Username != paramUserName {
+	if claims.Username != paramUserName {
 		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Cannot create coupons for other users."})
 		return
 	}
@@ -239,7 +242,7 @@ func AddCoupon(ctx *gin.Context) {
 
 	// 在数据库添加优惠券
 	coupon := model.Coupon{
-		Username:    user.Username,
+		Username:    claims.Username,
 		CouponName:  couponName,
 		Amount:      amount,
 		Left:        amount,
