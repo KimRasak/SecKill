@@ -15,10 +15,8 @@ func initRedisConnection(config conf.AppConfig)  {
 		DB:       0,  // use default DB
 	})
 
-	if config.App.FlushAllForTest {
-		if _, err := FlushAll(); err != nil {
-			println("Error when flushAll. " + err.Error())
-		}
+	if _, err := FlushAll(); err != nil {
+		println("Error when flushAll. " + err.Error())
 	}
 }
 

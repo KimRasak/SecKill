@@ -6,11 +6,22 @@ import (
 )
 
 const (
-	MinUserNameLen = 4
-	MinPasswordLen = 4
+	MinUserNameLen = 1
+	MinPasswordLen = 1
 	NormalCustomer = "customer"
 	NormalSeller   = "saler"
 )
+
+type LoginUser struct {
+	Username string
+	Password string
+}
+
+type RegisterUser struct {
+	LoginUser
+	Kind     string
+}
+
 type User struct {
 	Id       int     `gorm:"primary_key;auto_increment"`
 	Username string  `gorm:"type:varchar(20)"`
