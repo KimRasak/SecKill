@@ -29,7 +29,7 @@ type noSuchCouponError struct {
 }
 
 func (e noSuchCouponError) Error() string {
-	return fmt.Sprintf("Coupon %s created by %s doesn't exist.", e.userName, e.couponName)
+	return fmt.Sprintf("Coupon %s created by %s doesn't exist.", e.couponName, e.userName)
 }
 
 type noCouponLeftError struct {
@@ -38,7 +38,7 @@ type noCouponLeftError struct {
 }
 
 func (e noCouponLeftError) Error() string {
-	return fmt.Sprintf("No Coupon %s created by %s left.", e.userName, e.couponName)
+	return fmt.Sprintf("No Coupon %s created by %s left.", e.couponName, e.userName)
 }
 
 type CouponLeftResError struct {

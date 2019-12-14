@@ -16,7 +16,7 @@ func GetAllCoupons() ([]model.Coupon, error) {
 func UserHasCoupon(userName string, coupon model.Coupon) error {
 	return data.Db.Exec(fmt.Sprintf("INSERT IGNORE INTO coupons " +
 		"(`username`,`coupon_name`,`amount`,`left`,`stock`,`description`) " +
-		"values('%s', '%s', %d, %d, %d, '%s')",
+		"values('%s', '%s', %d, %d, %f, '%s')",
 		userName, coupon.CouponName, 1, 1, coupon.Stock, coupon.Description)).Error
 }
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"log"
 	"net/http"
 	"strconv"
 	myjwt "SecKill/middleware/jwt"
@@ -38,18 +39,21 @@ func FetchCoupon(ctx *gin.Context)  	{
 	// 先在缓存执行原子性的秒杀操作。将原子性地完成"判断能否秒杀-执行秒杀"的步骤
 	secKillRes, err := redisService.CacheAtomicSecKill(claims.Username, paramSellerName, paramCouponName)
 	if err == nil {
-		print(fmt.Sprintf("result: %d", secKillRes))
+		log.Println(fmt.Sprintf("result: %d", secKillRes))
 		coupon := redisService.GetCoupon(paramCouponName)
 		// 交给[协程]完成数据库写入操作
 		SecKillChannel <- secKillMessage{claims.Username, coupon}
 		ctx.JSON(http.StatusCreated, gin.H{ErrMsgKey: ""})
+		return
 	} else {
 		if redisService.IsRedisEvalError(err) {
+			log.Println("Server error" + err.Error())
 			ctx.JSON(http.StatusInternalServerError, gin.H{ErrMsgKey: err.Error()})
-			println("Server error" + err.Error())
+			return
 		} else {
-			ctx.JSON(http.StatusNoContent, gin.H{ErrMsgKey: err.Error()})
-			println("Fail to fetch coupon. " + err.Error())
+			log.Println("Fail to fetch coupon. " + err.Error())
+			ctx.JSON(http.StatusNoContent, gin.H{})
+			return
 		}
 		// 可在此将err输出到log.
 	}
@@ -131,6 +135,7 @@ func GetCoupons(ctx *gin.Context) {
 	page = tmpPage - 1
 
 	fmt.Printf("Querying coupon with name %s, page %d\n", queryUserName, page)
+	// TODO: 查询用户需要从缓存查
 	// 查找对应用户
 	queryUser := model.User{Username:queryUserName}
 	queryErr := data.Db.Where(&queryUser).
@@ -174,8 +179,8 @@ func GetCoupons(ctx *gin.Context) {
 			var allCoupons []model.Coupon
 			var err error
 			if allCoupons, err = redisService.GetCoupons(queryUserName); err != nil {
-				ctx.JSON(http.StatusInternalServerError,
-					gin.H{ErrMsgKey: "Error when getting seller's coupons", DataKey: allCoupons})
+				ctx.JSON(http.StatusInternalServerError, gin.H{ErrMsgKey: "Error when getting seller's coupons.", DataKey: allCoupons})
+				return
 			}
 			coupons := getValidCouponSlice(allCoupons, page)
 

@@ -3,6 +3,8 @@ package engine
 import (
 	"SecKill/api"
 	"SecKill/conf"
+	"SecKill/data"
+	"SecKill/middleware/jwt"
 	"SecKill/model"
 	"encoding/gob"
 	"github.com/gin-contrib/sessions"
@@ -28,11 +30,12 @@ func SeckillEngine() *gin.Engine {
 
 	// 设置路由
 	userRouter := router.Group("/api/users")
+	userRouter.POST("/", api.RegisterUser)
+	userRouter.Use(jwt.JWTAuth())
 	{
 		userRouter.PATCH("/:username/coupons/:name", api.FetchCoupon)
 		userRouter.GET("/:username/coupons", api.GetCoupons)
 		userRouter.POST("/:username/coupons", api.AddCoupon)
-		userRouter.POST("/", api.RegisterUser)
 	}
 
 	authRouter := router.Group("/api/auth")
@@ -44,6 +47,13 @@ func SeckillEngine() *gin.Engine {
 	testRouter := router.Group("/test")
 	{
 		testRouter.GET("/", api.Welcome)
+		testRouter.GET("/flush", func(context *gin.Context) {
+			if _, err := data.FlushAll(); err != nil {
+				println("Error when flushAll. " + err.Error())
+			} else {
+				println("Flushall succeed.")
+			}
+		})
 	}
 
 	// 启动秒杀功能的消费者

@@ -20,14 +20,14 @@ func seckillConsumer() {
 
 		username := message.username
 		sellerName := message.coupon.Username
-		CouponName := message.coupon.CouponName
+		couponName := message.coupon.CouponName
 
 		var err error
 		err = dbService.UserHasCoupon(username, message.coupon)
 		if err != nil {
 			println("Error when inserting user's coupon. " + err.Error())
 		}
-		err = dbService.DecreaseOneCouponLeft(sellerName, CouponName)
+		err = dbService.DecreaseOneCouponLeft(sellerName, couponName)
 		if err != nil {
 			println("Error when decreasing coupon left. " + err.Error())
 		}

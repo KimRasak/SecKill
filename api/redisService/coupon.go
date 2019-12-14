@@ -1,9 +1,11 @@
 package redisService
 
 import (
+	"SecKill/api/dbService"
 	"SecKill/data"
 	"SecKill/model"
 	"fmt"
+	"log"
 	"strconv"
 )
 
@@ -46,12 +48,20 @@ func CacheCoupon(coupon model.Coupon) (string, error) {
 
 // 缓存优惠券
 func CacheCouponAndHasCoupon(coupon model.Coupon) error {
-	var err error
-	if _, err = CacheHasCoupon(coupon); err != nil {
+	if _, err := CacheHasCoupon(coupon); err != nil {
 		return err
 	}
-	_, err = CacheCoupon(coupon)
-	return err
+
+	// user = 根据优惠券的username查user
+	if user, err := dbService.GetUser(coupon.Username); err != nil {
+		log.Println(err)
+		return err
+	} else {
+		if user.IsSeller() {
+			_, err = CacheCoupon(coupon)
+		}
+		return err
+	}
 }
 
 // 从缓存获取优惠券
@@ -61,22 +71,22 @@ func GetCoupon(couponName string) model.Coupon {
 	if err != nil {
 		println("Error on getting coupon. " + err.Error())
 	}
-
+	log.Println(values)
 	id, err := strconv.ParseInt(values[0].(string), 10, 64)
 	if err != nil {
 		println("Wrong type of id. " + err.Error())
 	}
 	amount, err := strconv.ParseInt(values[3].(string), 10, 64)
 	if err != nil {
-		println("Wrong type of id. " + err.Error())
+		println("Wrong type of amount. " + err.Error())
 	}
 	left, err := strconv.ParseInt(values[4].(string), 10, 64)
 	if err != nil {
-		println("Wrong type of id. " + err.Error())
+		println("Wrong type of left. " + err.Error())
 	}
-	stock, err := strconv.ParseInt(values[5].(string), 10, 64)
+	stock, err := strconv.ParseFloat(values[5].(string), 64)
 	if err != nil {
-		println("Wrong type of id. " + err.Error())
+		println("Wrong type of stock. " + err.Error())
 	}
 	return model.Coupon{
 		Id:          id,

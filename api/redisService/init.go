@@ -22,7 +22,7 @@ const secKillScript = `
 	then
 		return -2;  --- No such coupon
 	end
-	if (couponLeft == 0)
+	if (tonumber(couponLeft) == 0)  --- couponLeft是字符串类型
     then
 		return -3;  ---  No Coupon Left.
 	end
