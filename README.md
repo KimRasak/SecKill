@@ -8,7 +8,11 @@ docker CE 19.03.3
 docker-compose 1.18
 
 # 执行步骤
-
+## 单纯运行服务测试端口
+1. 安装好docker, docker-compose, 下载项目里的docker-compose.yaml文件
+   
+2. 运行命令 docker-compose up 即可启动服务测试端口
+## 开发要做的步骤
 1. 要提前安装好go1.13, docker, docker-compose, IDE推荐goland, 最好用Linux环境...
 
 2. 然后把项目拷到任意目录, 新版go不再硬性规定放在$GOPATH/src
@@ -37,10 +41,10 @@ docker-compose 1.18
     ![服务docker](./images/service_docker.jpg)
 
 # 登录mysql查看用户和优惠券数据
+（后来把mysql用户和密码都改为了root root，数据库seckill，所以截图显示的不是最新的情况）
+1. mysql -uroot -proot -h 127.0.0.1
 
-1. mysql -udeveloper -p123456 -h 127.0.0.1
-
-2. show databases; use dev; show tables;
+2. show databases; use seckill; show tables;
 
    ![mysql](./images/mysql.jpg)
 # 登录redis查看session等数据
