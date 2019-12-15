@@ -1,9 +1,9 @@
 app:
   database:
     type: mysql
-    user: developer
-    password: 123456
-    dbName: dev
+    user: root
+    password: root
+    dbName: seckill
     address: mysql:3306
     maxIdle: 10
     maxOpen: 10

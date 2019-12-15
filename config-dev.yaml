@@ -1,10 +1,10 @@
 app:
   database:
     type: mysql
-    user: developer
-    password: 123456
-    dbName: dev
-    address: 127.0.0.1:3306
+    user: root
+    password: root
+    dbName: seckill
+    address: 127.0.0.1:23306
     maxIdle: 10
     maxOpen: 10
   redis:
