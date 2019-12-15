@@ -3,13 +3,11 @@ services:
   mysql-service:
     image: mysql:5.7
     ports:
-      - "3306:3306"
+      - "23306:3306"
     restart: 'always'
     environment:
-      MYSQL_ROOT_PASSWORD: "123456"
-      MYSQL_DATABASE: "dev"
-      MYSQL_USER: "developer"
-      MYSQL_PASSWORD: "123456"
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_DATABASE: "seckill"
   redis-service:
     image: redis
     command: redis-server --requirepass 123456
@@ -18,9 +16,9 @@ services:
     restart: 'always'
   seckill:
     restart: 'always'
-    build: ./
+    image: registry.cn-shenzhen.aliyuncs.com/karlhjm/seckill:0.1.1
     ports:
-      - "8000:8000"
+      - "20080:8000"
     links:
       - mysql-service:mysql
       - redis-service:redis
