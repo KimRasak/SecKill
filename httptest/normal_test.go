@@ -112,9 +112,12 @@ func testFetchCoupon(e *httpexpect.Expect, couponAmount int) {
 	// 抢一张优惠券
 	fetchDemoCouponSuccess(e)
 
-	// 商家优惠券数量-1、顾客优惠券数量为+1
+	// 商家优惠券数量-1 顾客可看到该优惠券。
 	isCouponExpectedLeft(e,  demoSellerName, 0, 0, couponAmount - 1)
+	isNonEmptyCoupons(e, demoSellerName, 0)
+	isSellerSchema(e, demoSellerName, 0)
 	isNonEmptyCoupons(e, demoCustomerName, 0)
+	isCustomerSchema(e, demoCustomerName, 0)
 
 	// 不可重复抢优惠券
 	fetchDemoCouponFail(e)
