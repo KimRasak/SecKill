@@ -30,7 +30,7 @@ func SeckillEngine() *gin.Engine {
 
 	// 设置路由
 	userRouter := router.Group("/api/users")
-	userRouter.POST("/", api.RegisterUser)
+	userRouter.POST("", api.RegisterUser)
 	userRouter.Use(jwt.JWTAuth())
 	{
 		userRouter.PATCH("/:username/coupons/:name", api.FetchCoupon)
@@ -40,7 +40,7 @@ func SeckillEngine() *gin.Engine {
 
 	authRouter := router.Group("/api/auth")
 	{
-		authRouter.POST("/", api.LoginAuth)
+		authRouter.POST("", api.LoginAuth)
 		authRouter.POST("/logout", api.Logout)
 	}
 
