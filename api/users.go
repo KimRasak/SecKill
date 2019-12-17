@@ -301,7 +301,7 @@ func RegisterUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Insert user failed. Maybe user name duplicates."})
 		return
 	} else {
-		ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: ""})
+		ctx.JSON(http.StatusCreated, gin.H{ErrMsgKey: ""})
 		return
 	}
 }

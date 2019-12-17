@@ -16,9 +16,9 @@ services:
     restart: 'always'
   seckill:
     restart: 'always'
-    image: registry.cn-shenzhen.aliyuncs.com/karlhjm/seckill:0.1.2
+    image: registry.cn-shenzhen.aliyuncs.com/karlhjm/seckill:0.1.3
     ports:
-      - "20080:8000"
+      - "20080:20080"
     links:
       - mysql-service:mysql
       - redis-service:redis

@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-const port = 8000
+const port = 20080
 func main() {
 	router := engine.SeckillEngine()
 	defer data.Close()
