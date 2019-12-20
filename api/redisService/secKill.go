@@ -3,6 +3,7 @@ package redisService
 import (
 	"SecKill/data"
 	"fmt"
+	"github.com/prometheus/common/log"
 )
 
 // 下面是一大堆自定义的Error
@@ -77,6 +78,8 @@ func CacheAtomicSecKill(userName string, sellerName string, couponName string) (
 		return -1, CouponLeftResError{res}
 	}
 
+	// 此处的-1, -2, -3 和 >=0的判断依据, 与secKillSHA变量lua脚本的返回值保持一致
+	// 请看secKillSHA
 	switch {
 	case couponLeftRes == -1:
 		return -1, userHasCouponError{userName, couponName}
@@ -84,9 +87,12 @@ func CacheAtomicSecKill(userName string, sellerName string, couponName string) (
 		return -1, noSuchCouponError{sellerName, couponName}
 	case couponLeftRes == -3:
 		return -1, noCouponLeftError{sellerName, couponName}
-	case couponLeftRes >= 0:
+	case couponLeftRes == 1:  // left为0时, 就是存量为0, 那就是没抢到, 也可能原本为1, 抢完变成了0.
 		return couponLeftRes, nil
-	default:
+	default: {
+		log.Fatal("Unexpected return value.")
 		return -1, CouponLeftResError{couponLeftRes}
+	}
+
 	}
 }

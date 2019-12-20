@@ -9,7 +9,6 @@ import (
 	"github.com/jinzhu/gorm"
 	"net/http"
 	"time"
-	"log"
 )
 
 import "SecKill/data"
@@ -66,7 +65,7 @@ func generateToken(ctx *gin.Context, user model.User)  {
 		return
 	}
 
-	log.Println(token)
+	//log.Println(token)
 	ctx.Header("Authorization", token)
 	ctx.JSON(http.StatusOK, gin.H{
 		kindKey: user.Kind,

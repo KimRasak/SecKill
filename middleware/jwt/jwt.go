@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"log"
 	"net/http"
 	"time"
 )
@@ -21,7 +20,7 @@ func JWTAuth() gin.HandlerFunc {
 			return
 		}
 
-		log.Print("get Authorization： ", token)
+		// log.Print("get Authorization： ", token)
 
 		j := NewJWT()
 		claims, err := j.ParseToken(token)

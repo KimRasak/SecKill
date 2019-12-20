@@ -7,20 +7,20 @@ type Coupon struct {
 	CouponName  string    `gorm:"type:varchar(60); not null"` // 优惠券名称
 	Amount      int64     						              // 最大优惠券数
 	Left        int64								          // 剩余优惠券数
-	Stock       float64                                         // 面额
-	Description string  `gorm:"type:varchar(60)"`             // 优惠券描述信息
+	Stock       int64                                       // 面额
+	Description string    `gorm:"type:varchar(60)"`           // 优惠券描述信息
 }
 
 type ReqCoupon struct {
 	Name			string
 	Amount 			int64
 	Description     string
-	Stock           float64
+	Stock           int64
 }
 
 type ResCoupon struct {
 	Name            string  `json:"name"`
-	Stock           float64     `json:"stock"`
+	Stock           int64   `json:"stock"`
 	Description     string  `json:"description"`
 }
 

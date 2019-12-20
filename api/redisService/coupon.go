@@ -54,7 +54,7 @@ func CacheCouponAndHasCoupon(coupon model.Coupon) error {
 
 	// user = 根据优惠券的username查user
 	if user, err := dbService.GetUser(coupon.Username); err != nil {
-		log.Println(err)
+		log.Println("Database service error: ", err)
 		return err
 	} else {
 		if user.IsSeller() {
@@ -71,7 +71,8 @@ func GetCoupon(couponName string) model.Coupon {
 	if err != nil {
 		println("Error on getting coupon. " + err.Error())
 	}
-	log.Println(values)
+	// log.Println(values) TODO
+	// values[0]类型是nil，说明key是不存在的？
 	id, err := strconv.ParseInt(values[0].(string), 10, 64)
 	if err != nil {
 		println("Wrong type of id. " + err.Error())
@@ -84,7 +85,7 @@ func GetCoupon(couponName string) model.Coupon {
 	if err != nil {
 		println("Wrong type of left. " + err.Error())
 	}
-	stock, err := strconv.ParseFloat(values[5].(string), 64)
+	stock, err := strconv.ParseInt(values[5].(string), 10, 64)
 	if err != nil {
 		println("Wrong type of stock. " + err.Error())
 	}
@@ -113,5 +114,10 @@ func GetCoupons(userName string) ([]model.Coupon, error) {
 		coupon := GetCoupon(couponName)
 		coupons = append(coupons, coupon)
 	}
+	//if len(coupons) > 20 {
+	//	log.Fatalln("发现一个用户有超过20张优惠券: ", len(coupons))
+	//
+	//
+	//}
 	return coupons, nil
 }

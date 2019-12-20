@@ -3,6 +3,7 @@ package api
 import (
 	"SecKill/api/dbService"
 	"SecKill/model"
+	"log"
 )
 
 type secKillMessage struct {
@@ -16,7 +17,7 @@ var SecKillChannel = make(chan secKillMessage, maxMessageNum)
 func seckillConsumer() {
 	for {
 		message := <- SecKillChannel
-		println("Got one message: " + message.username)
+		log.Println("Got one message: " + message.username)
 
 		username := message.username
 		sellerName := message.coupon.Username

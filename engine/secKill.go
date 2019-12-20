@@ -16,7 +16,7 @@ import (
 const SessionHeaderKey =  "Authorization"
 
 func SeckillEngine() *gin.Engine {
-	router := gin.Default()
+	router := gin.New()
 
 	// 设置session为Redis存储
 	config, err := conf.GetAppConfig()
