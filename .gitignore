@@ -13,3 +13,6 @@
 
 # Idea configure directory
 .idea
+
+# 热更新插件的临时文件夹
+tmp/
