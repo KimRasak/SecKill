@@ -2,46 +2,32 @@ package engine
 
 import (
 	"SecKill/api"
-	"SecKill/conf"
+	"SecKill/api/controller"
 	"SecKill/data"
 	"SecKill/middleware/jwt"
 	"SecKill/model"
 	"encoding/gob"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 )
 
-// Visible for test
-const SessionHeaderKey =  "Authorization"
-
 func SeckillEngine() *gin.Engine {
 	router := gin.New()
-
-	// 设置session为Redis存储
-	config, err := conf.GetAppConfig()
-	if err != nil {
-		panic("failed to load redisService config" + err.Error())
-	}
-	store, _ := redis.NewStore(config.App.Redis.MaxIdle, config.App.Redis.Network,
-		config.App.Redis.Address, config.App.Redis.Password, []byte("seckill"))
-	router.Use(sessions.Sessions(SessionHeaderKey, store))
 	gob.Register(&model.User{})
 
 	// 设置路由
 	userRouter := router.Group("/api/users")
-	userRouter.POST("", api.RegisterUser)
+	userRouter.POST("", controller.RegisterUser)
 	userRouter.Use(jwt.JWTAuth())
 	{
-		userRouter.PATCH("/:username/coupons/:name", api.FetchCoupon)
-		userRouter.GET("/:username/coupons", api.GetCoupons)
-		userRouter.POST("/:username/coupons", api.AddCoupon)
+		userRouter.PATCH("/:username/coupons/:name", controller.FetchCoupon)
+		userRouter.GET("/:username/coupons", controller.GetCoupons)
+		userRouter.POST("/:username/coupons", controller.AddCoupon)
 	}
 
 	authRouter := router.Group("/api/auth")
 	{
-		authRouter.POST("", api.LoginAuth)
-		authRouter.POST("/logout", api.Logout)
+		authRouter.POST("", controller.LoginAuth)
+		authRouter.POST("/logout", controller.Logout)
 	}
 
 	testRouter := router.Group("/testing")

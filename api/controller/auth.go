@@ -1,6 +1,7 @@
-package api
+package controller
 
 import (
+	"SecKill/api"
 	"SecKill/api/redisService"
 	myjwt "SecKill/middleware/jwt"
 	"SecKill/model"
@@ -19,7 +20,7 @@ const kindKey = "kind"
 func LoginAuth(ctx *gin.Context)  {
 	var postUser model.LoginUser
 	if err := ctx.BindJSON(&postUser); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{kindKey: "", ErrMsgKey: "Parse JSON format fail."})
+		ctx.JSON(http.StatusInternalServerError, gin.H{kindKey: "", api.ErrMsgKey: "Parse JSON format fail."})
 		return
 	} else {
 		// 先从redis查找用户，得到则直接认证
@@ -30,7 +31,7 @@ func LoginAuth(ctx *gin.Context)  {
 			err := data.Db.Where(&queryUser).
 				First(&queryUser).Error
 			if err != nil && gorm.IsRecordNotFoundError(err) {
-				ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: "", ErrMsgKey: "No such queryUser."})
+				ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: "", api.ErrMsgKey: "No such queryUser."})
 				return
 			}
 
@@ -39,7 +40,7 @@ func LoginAuth(ctx *gin.Context)  {
 
 		// 匹配密码
 		if queryUser.Password != model.GetMD5(postUser.Password) {
-			ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: queryUser.Kind, ErrMsgKey: "Password mismatched."})
+			ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: queryUser.Kind, api.ErrMsgKey: "Password mismatched."})
 			return
 		}
 
@@ -66,17 +67,17 @@ func generateToken(ctx *gin.Context, user model.User)  {
 	token, err := j.CreateToken(claims)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
-			kindKey: user.Kind,
-			ErrMsgKey: err,
+			kindKey:       user.Kind,
+			api.ErrMsgKey: err,
 		})
 		return
 	}
 
 	//log.Println(token)
-	ctx.Header("Authorization", token)
+	ctx.Header(myjwt.AuthorizationKey, token)
 	ctx.JSON(http.StatusOK, gin.H{
-		kindKey: user.Kind,
-		ErrMsgKey: "",
+		kindKey:       user.Kind,
+		api.ErrMsgKey: "",
 	})
 	return
 
@@ -91,6 +92,6 @@ func Logout(ctx *gin.Context)  {
 	}
 
 
-	ctx.JSON(http.StatusOK, gin.H{ErrMsgKey: "log out."})
+	ctx.JSON(http.StatusOK, gin.H{api.ErrMsgKey: "log out."})
 	return
 }

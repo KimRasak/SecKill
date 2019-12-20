@@ -2,13 +2,11 @@ package util
 
 import (
 	"SecKill/api"
+	"SecKill/middleware/jwt"
 	"SecKill/model"
 	"github.com/gavv/httpexpect"
 	"net/http"
 )
-
-// 登录成功时header返回的凭证, 同时也是带身份操作时需要在header附上的凭证
-const authorizationKey = "Authorization"
 
 // 正确的注册消息体
 type stdRegisterBody struct {
@@ -41,21 +39,21 @@ func userToLoginBody(user model.User) stdLoginBody {
 }
 
 // 测试注册用户成功
-func regSuccess(e *httpexpect.Expect, user model.User) {
+func RegSuccess(e *httpexpect.Expect, user model.User) {
 	regBody := userToRegBody(user)
 	e.POST(defaultPath.Register).
 		WithJSON(regBody).
 		Expect().
-		Status(http.StatusOK).JSON().Object().
+		Status(http.StatusCreated).JSON().Object().
 		ValueEqual(api.ErrMsgKey, "")
 }
 
 // 测试用户登录成功
 // 返回: 登录凭证
-func loginSuccess(e *httpexpect.Expect, user model.User) string {
+func LoginSuccess(e *httpexpect.Expect, user model.User) string {
 	loginBody := userToLoginBody(user)
 
-	expect := e.POST(defaultPath.Register).
+	expect := e.POST(defaultPath.LoginAuth).
 		WithJSON(loginBody).
 		Expect()
 
@@ -63,6 +61,6 @@ func loginSuccess(e *httpexpect.Expect, user model.User) string {
 		Status(http.StatusOK).JSON().Object().
 		ValueEqual(api.ErrMsgKey, "")
 
-	authorization := expect.JSON().Object().Value(authorizationKey).String().Raw()
+	authorization := expect.Header(jwt.AuthorizationKey).Raw()
 	return authorization
 }

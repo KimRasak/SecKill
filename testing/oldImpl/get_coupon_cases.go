@@ -2,6 +2,7 @@ package oldImpl
 
 import (
 	"SecKill/api"
+	"SecKill/api/controller"
 	"SecKill/model"
 	"fmt"
 	"github.com/gavv/httpexpect"
@@ -35,7 +36,7 @@ var customerSchema = fmt.Sprintf(`{
 				}
 			}
 	}
-}`, api.ErrMsgKey, api.DataKey)
+}`, api.ErrMsgKey, controller.DataKey)
 
 var sellerSchema = fmt.Sprintf(`{
 	"type": "object",
@@ -53,7 +54,7 @@ var sellerSchema = fmt.Sprintf(`{
 				}
 			}
 	}
-}`, api.ErrMsgKey, api.DataKey)
+}`, api.ErrMsgKey, controller.DataKey)
 
 // 当返回的数据为空，则状态码应为204，且没有返回内容
 func isEmptyBody(e *httpexpect.Expect, username string, page int) {
@@ -79,7 +80,7 @@ func isGetCouponUnauthorized(e *httpexpect.Expect, username string, page int) {
 		Expect().
 		Status(http.StatusUnauthorized).JSON().Object()
 	jsonObject.Value(api.ErrMsgKey).Equal("Cannot check other customer.")
-	jsonObject.Value(api.DataKey).Equal([]model.Coupon{})
+	jsonObject.Value(controller.DataKey).Equal([]model.Coupon{})
 
 }
 
@@ -99,6 +100,6 @@ func isSellerSchema(e *httpexpect.Expect, username string, page int) {
 // 验证优惠券的剩余量与预期一致
 func isCouponExpectedLeft(e *httpexpect.Expect, username string, page int, index int, expectedLeft int)  {
 	e.GET(getCouponPath, username).WithQuery(pageQueryKey, page).
-		Expect().JSON().Object().Value(api.DataKey).Array().
+		Expect().JSON().Object().Value(controller.DataKey).Array().
 		Element(index).Object().Value("left").Equal(expectedLeft)
 }

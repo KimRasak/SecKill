@@ -1,6 +1,7 @@
-package api
+package controller
 
 import (
+	"SecKill/api"
 	"SecKill/api/redisService"
 	"SecKill/data"
 	myjwt "SecKill/middleware/jwt"
@@ -12,9 +13,8 @@ import (
 	"strconv"
 )
 
-// Visible for testing
-const ErrMsgKey = "errMsg"
 const DataKey = "data"
+const PageKey = "page"
 
 
 // 秒杀优惠券
@@ -22,12 +22,12 @@ func FetchCoupon(ctx *gin.Context)  	{
 	// 登陆检查token
 	claims := ctx.MustGet("claims").(*myjwt.CustomClaims)
 	if claims == nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Authorized."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: "Not Authorized."})
 		return
 	}
 
 	if claims.Kind == model.NormalSeller{//user.IsSeller() {
-		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Sellers aren't allowed to get coupons."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: "Sellers aren't allowed to get coupons."})
 		return
 	}
 
@@ -41,13 +41,13 @@ func FetchCoupon(ctx *gin.Context)  	{
 		//log.Println(fmt.Sprintf("result: %d", secKillRes))
 		coupon := redisService.GetCoupon(paramCouponName)
 		// 交给[协程]完成数据库写入操作
-		SecKillChannel <- secKillMessage{claims.Username, coupon}
-		ctx.JSON(http.StatusCreated, gin.H{ErrMsgKey: ""})
+		api.SecKillChannel <- api.SecKillMessage{claims.Username, coupon}
+		ctx.JSON(http.StatusCreated, gin.H{api.ErrMsgKey: ""})
 		return
 	} else {
 		if redisService.IsRedisEvalError(err) {
 			log.Printf("Server error" + err.Error())
-			ctx.JSON(http.StatusInternalServerError, gin.H{ErrMsgKey: err.Error()})
+			ctx.JSON(http.StatusInternalServerError, gin.H{api.ErrMsgKey: err.Error()})
 			return
 		} else {
 			//log.Println("Fail to fetch coupon. " + err.Error())
@@ -66,10 +66,10 @@ const (
 func outputQueryError(ctx *gin.Context, err error) {
 	if gorm.IsRecordNotFoundError(err) {
 		log.Println("Record not found.")
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Record not found."})
+		ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Record not found."})
 	} else {
 		log.Println("Query error.")
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Query error."})
+		ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Query error."})
 	}
 }
 
@@ -116,11 +116,11 @@ func GetCoupons(ctx *gin.Context) {
 	claims := ctx.MustGet("claims").(*myjwt.CustomClaims)
 	if claims == nil {
 		log.Println("Not Authorized.")
-		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Authorized."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: "Not Authorized."})
 		return
 	}
 
-	queryUserName, queryPage := ctx.Param("username"), ctx.Query("page")
+	queryUserName, queryPage := ctx.Param("username"), ctx.Query(PageKey)
 
 	// 检查page参数, TODO：全部下标改为从1开始
 	// TODO: 要不要改成BindJSON
@@ -129,10 +129,10 @@ func GetCoupons(ctx *gin.Context) {
 	if queryPage == "" {
 		tmpPage = 1
 	} else {
-		tmpPage, err = strconv.ParseInt(ctx.Query("page"), 10, 64)
+		tmpPage, err = strconv.ParseInt(ctx.Query(PageKey), 10, 64)
 		if err != nil {
 			log.Println("Wrong format of page.")
-			ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Wrong format of page."})
+			ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Wrong format of page."})
 			return
 		}
 	}
@@ -166,7 +166,7 @@ func GetCoupons(ctx *gin.Context) {
 		var err error
 		if allCoupons, err = redisService.GetCoupons(claims.Username); err != nil {
 			log.Println("Server error.")
-			ctx.JSON(http.StatusInternalServerError, gin.H{ErrMsgKey: "Server error."})
+			ctx.JSON(http.StatusInternalServerError, gin.H{api.ErrMsgKey: "Server error."})
 			return
 		}
 
@@ -175,12 +175,12 @@ func GetCoupons(ctx *gin.Context) {
 		if queryUser.IsSeller() {
 			sellerCoupons := model.ParseSellerResCoupons(coupons)
 			statusCode := getDataStatusCode(len(sellerCoupons))
-			ctx.JSON(statusCode, gin.H{ErrMsgKey: "", DataKey: sellerCoupons})
+			ctx.JSON(statusCode, gin.H{api.ErrMsgKey: "", DataKey: sellerCoupons})
 			return
 		} else if queryUser.IsCustomer() {
 			customerCoupons := model.ParseCustomerResCoupons(coupons)
 			statusCode := getDataStatusCode(len(customerCoupons))
-			ctx.JSON(statusCode, gin.H{ErrMsgKey: "", DataKey: customerCoupons})
+			ctx.JSON(statusCode, gin.H{api.ErrMsgKey: "", DataKey: customerCoupons})
 			return
 		}
 	} else {
@@ -188,7 +188,7 @@ func GetCoupons(ctx *gin.Context) {
 		if queryUser.IsCustomer() {
 			// 不可查询其它顾客的优惠券
 			log.Println("Cannot check other customer.")
-			ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Cannot check other customer.", DataKey: []model.Coupon{}})
+			ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: "Cannot check other customer.", DataKey: []model.Coupon{}})
 			return
 		} else if queryUser.IsSeller() {
 			// 可以查询其它商家拥有的优惠券
@@ -196,14 +196,14 @@ func GetCoupons(ctx *gin.Context) {
 			var err error
 			if allCoupons, err = redisService.GetCoupons(queryUserName); err != nil {
 				log.Println("Error when getting seller's coupons.")
-				ctx.JSON(http.StatusInternalServerError, gin.H{ErrMsgKey: "Error when getting seller's coupons.", DataKey: allCoupons})
+				ctx.JSON(http.StatusInternalServerError, gin.H{api.ErrMsgKey: "Error when getting seller's coupons.", DataKey: allCoupons})
 				return
 			}
 			coupons := getValidCouponSlice(allCoupons, page)
 
 			sellerCoupons := model.ParseSellerResCoupons(coupons)
 			statusCode := getDataStatusCode(len(sellerCoupons))
-			ctx.JSON(statusCode, gin.H{ErrMsgKey: "", DataKey: sellerCoupons})
+			ctx.JSON(statusCode, gin.H{api.ErrMsgKey: "", DataKey: sellerCoupons})
 			return
 		}
 	}
@@ -216,14 +216,14 @@ func AddCoupon(ctx *gin.Context) {
 	claims := ctx.MustGet("claims").(*myjwt.CustomClaims)
 	if claims == nil {
 		log.Println("Not Authorized.")
-		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Authorized."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: "Not Authorized."})
 		return
 	}
 
 
 	if claims.Kind == "customer"{//!user.IsSeller() {
 		log.Println("Only sellers can create coupons.")
-		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Only sellers can create coupons."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: "Only sellers can create coupons."})
 		return
 	}
 
@@ -232,7 +232,7 @@ func AddCoupon(ctx *gin.Context) {
 	var postCoupon model.ReqCoupon
 	if err := ctx.BindJSON(&postCoupon); err != nil {
 		log.Println("Expected receive JSON format. ", err.Error())
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Only receive JSON format."})
+		ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Only receive JSON format."})
 		return
 	}
 	couponName := postCoupon.Name
@@ -241,7 +241,7 @@ func AddCoupon(ctx *gin.Context) {
 	formStock := postCoupon.Stock
 	if claims.Username != paramUserName {
 		log.Println("Cannot create coupons for other users.")
-		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Cannot create coupons for other users."})
+		ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: "Cannot create coupons for other users."})
 		return
 	}
 	amount := formAmount
@@ -266,18 +266,18 @@ func AddCoupon(ctx *gin.Context) {
 	err = data.Db.Create(&coupon).Error
 	if err != nil {
 		log.Println("Create failed. Maybe (username,coupon name) duplicates")
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Create failed. Maybe (username,coupon name) duplicates"})
+		ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Create failed. Maybe (username,coupon name) duplicates"})
 		return
 	}
 
 	// 在Redis添加优惠券
 	if err = redisService.CacheCouponAndHasCoupon(coupon); err != nil {
 		log.Println("Create Cache failed. ", err.Error())
-		ctx.JSON(http.StatusInternalServerError, gin.H{ErrMsgKey: "Create Cache failed. " + err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{api.ErrMsgKey: "Create Cache failed. " + err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{ErrMsgKey: ""})
+	ctx.JSON(http.StatusCreated, gin.H{api.ErrMsgKey: ""})
 	return
 
 }
@@ -286,25 +286,25 @@ func AddCoupon(ctx *gin.Context) {
 func RegisterUser(ctx *gin.Context) {
 	var postUser model.RegisterUser
 	if err := ctx.BindJSON(&postUser); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Only receive JSON format."})
+		ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Only receive JSON format."})
 		return
 	}
 	// 查看参数长度、是否为空、格式
 	if len(postUser.Username) < model.MinUserNameLen {
 		log.Println("User name too short.")
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "User name too short."})
+		ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "User name too short."})
 		return
 	} else if len(postUser.Password) < model.MinPasswordLen {
 		log.Println("Password too short.")
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Password too short."})
+		ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Password too short."})
 		return
 	} else if postUser.Kind == "" {
 		log.Println("Empty field of kind.")
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Empty field of kind."})
+		ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Empty field of kind."})
 		return
 	} else if !model.IsValidKind(postUser.Kind) {
 		log.Println("Unexpected value of kind, ", postUser.Kind)
-			ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Unexpected value of kind, " + postUser.Kind})
+			ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Unexpected value of kind, " + postUser.Kind})
 			return
 	}
 
@@ -313,14 +313,14 @@ func RegisterUser(ctx *gin.Context) {
 	err := data.Db.Create(&user).Error
 	if err != nil {
 		log.Println("Insert user failed. Maybe user name duplicates.")
-		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Insert user failed. Maybe user name duplicates."})
+		ctx.JSON(http.StatusBadRequest, gin.H{api.ErrMsgKey: "Insert user failed. Maybe user name duplicates."})
 		return
 	} else {
 		// 缓存用户信息进redis，TODO 后面最好改用mysql的crud触发器更新进redis
 		if val, err := redisService.CacheUser(user); err != nil {
 			log.Println("Cannot cache user to redis", val, err.Error())
 		}
-		ctx.JSON(http.StatusCreated, gin.H{ErrMsgKey: ""})
+		ctx.JSON(http.StatusCreated, gin.H{api.ErrMsgKey: ""})
 		return
 	}
 }

@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"SecKill/api"
 	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
@@ -8,14 +9,13 @@ import (
 	"time"
 )
 
-const ErrMsgKey = "errMsg"
-const DataKey = "data"
+const AuthorizationKey = "Authorization" // 登录成功时header返回的凭证, 同时也是带身份操作时需要在header附上的凭证
 
 func JWTAuth() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		token := ctx.GetHeader("Authorization")
+		token := ctx.GetHeader(AuthorizationKey)
 		if token == "" {
-			ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Not Authorized."})
+			ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: "Not Authorized."})
 			ctx.Abort()
 			return
 		}
@@ -26,11 +26,11 @@ func JWTAuth() gin.HandlerFunc {
 		claims, err := j.ParseToken(token)
 		if err != nil {
 			if err == TokenExpired {
-				ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Authorization has expired."})
+				ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: "Authorization has expired."})
 				ctx.Abort()
 				return
 			}
-			ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: err.Error()})
+			ctx.JSON(http.StatusUnauthorized, gin.H{api.ErrMsgKey: err.Error()})
 			ctx.Abort()
 			return
 		}
@@ -57,8 +57,8 @@ var (
 // 载荷，可以加一些自己需要的信息
 type CustomClaims struct {
 	Username  string `json:"username"`
-	Password string `json:"password"`
-	Kind     string `json:"kind"`
+	Password string  `json:"password"`
+	Kind     string  `json:"kind"`
 	jwt.StandardClaims
 }
 

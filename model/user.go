@@ -13,17 +13,17 @@ const (
 )
 
 type LoginUser struct {
-	Username string
-	Password string
+	Username string  `json:"username"`
+	Password string  `json:"password"`
 }
 
 type RegisterUser struct {
 	LoginUser
-	Kind     string
+	Kind     string  `json:"kind"`
 }
 
 type User struct {
-	Id       int64     `gorm:"primary_key;auto_increment"`
+	Id       int64   `gorm:"primary_key;auto_increment"`
 	Username string  `gorm:"type:varchar(20)"`
 	Kind     string  `gorm:"type:varchar(20)"`
 	Password string  `gorm:"type:varchar(32)"`
