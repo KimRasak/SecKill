@@ -26,7 +26,7 @@ func FetchCoupon(ctx *gin.Context)  	{
 		return
 	}
 
-	if claims.Kind == "saler"{//user.IsSeller() {
+	if claims.Kind == model.NormalSeller{//user.IsSeller() {
 		ctx.JSON(http.StatusUnauthorized, gin.H{ErrMsgKey: "Sellers aren't allowed to get coupons."})
 		return
 	}
@@ -110,6 +110,8 @@ func getDataStatusCode(len int) int {
 
 // 查询优惠券
 func GetCoupons(ctx *gin.Context) {
+	var err error
+
 	// 登陆检查token
 	claims := ctx.MustGet("claims").(*myjwt.CustomClaims)
 	if claims == nil {
@@ -127,7 +129,6 @@ func GetCoupons(ctx *gin.Context) {
 	if queryPage == "" {
 		tmpPage = 1
 	} else {
-		var err error
 		tmpPage, err = strconv.ParseInt(ctx.Query("page"), 10, 64)
 		if err != nil {
 			log.Println("Wrong format of page.")
@@ -140,14 +141,22 @@ func GetCoupons(ctx *gin.Context) {
 	page = tmpPage - 1
 
 	//log.Printf("Querying coupon with name %s, page %d\n", queryUserName, page)
-	// TODO: 查询用户需要从缓存查
-	// 查找对应用户
-	queryUser := model.User{Username:queryUserName}
-	queryErr := data.Db.Where(&queryUser).
-		First(&queryUser).Error
-	if queryErr != nil {
-		outputQueryError(ctx, queryErr)
-		return
+	// 先从redis查找用户，得不到再去数据库查并且需要把信息重新缓存到redis
+	var queryUser model.User
+	if queryUser, err = redisService.GetUserByName(queryUserName); err != nil {
+		// 再从mysql查找该用户
+		queryUser = model.User{Username:queryUserName}
+		queryErr := data.Db.Where(&queryUser).
+			First(&queryUser).Error
+		if queryErr != nil {
+			outputQueryError(ctx, queryErr)
+			return
+		}
+
+		// 缓存进redis，有可能会失败，但问题不大
+		if _, err = redisService.CacheUser(queryUser); err != nil {
+			log.Println("Fail to cache userinfo to redis: ", err.Error())
+		}
 	}
 
 	// 根据用户名查找其拥有/创建的优惠券
@@ -299,7 +308,7 @@ func RegisterUser(ctx *gin.Context) {
 			return
 	}
 
-	// 插入用户
+	// 插入用户到mysql
 	user := model.User{Username: postUser.Username, Kind: postUser.Kind, Password: model.GetMD5(postUser.Password)}
 	err := data.Db.Create(&user).Error
 	if err != nil {
@@ -307,6 +316,10 @@ func RegisterUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Insert user failed. Maybe user name duplicates."})
 		return
 	} else {
+		// 缓存用户信息进redis，TODO 后面最好改用mysql的crud触发器更新进redis
+		if val, err := redisService.CacheUser(user); err != nil {
+			log.Println("Cannot cache user to redis", val, err.Error())
+		}
 		ctx.JSON(http.StatusCreated, gin.H{ErrMsgKey: ""})
 		return
 	}
