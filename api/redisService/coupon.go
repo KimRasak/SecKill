@@ -20,7 +20,7 @@ func getCouponKeyByCoupon(coupon model.Coupon) string {
 	return getCouponKeyByName(coupon.CouponName)
 }
 func getCouponKeyByName(couponName string) string {
-	return fmt.Sprintf("%s-info", couponName)
+	return fmt.Sprintf("coupon-%s-info", couponName)
 }
 
 // 缓存用户拥有优惠券/商家创建优惠券的信息
@@ -69,48 +69,63 @@ func GetCoupon(couponName string) model.Coupon {
 	key := getCouponKeyByName(couponName)
 	values, err := data.GetMap(key, "id", "username", "couponName", "amount", "left", "stock", "description")
 	if err != nil {
-		println("Error on getting coupon. " + err.Error())
+		log.Println("Error on getting coupon. " + err.Error())
 	}
 	// log.Println(values) TODO
-	// values[0]类型是nil，说明key是不存在的？
-	id, err := strconv.ParseInt(values[0].(string), 10, 64)
-	if err != nil {
-		println("Wrong type of id. " + err.Error())
+	// values[0]类型是nil，说明key是不存在的？是的，如果是nil然后直接进行转换会panic的，加个检测，还需要后续进一步处理
+	notNil := true
+	for _, val := range values {
+		if val == nil {
+			notNil = false
+			log.Println("Error on getting coupon. " + err.Error())
+			break
+		}
 	}
-	amount, err := strconv.ParseInt(values[3].(string), 10, 64)
-	if err != nil {
-		println("Wrong type of amount. " + err.Error())
+
+	var coupon model.Coupon
+	if notNil {
+		id, err := strconv.ParseInt(values[0].(string), 10, 64)
+		if err != nil {
+			println("Wrong type of id. " + err.Error())
+		}
+		amount, err := strconv.ParseInt(values[3].(string), 10, 64)
+		if err != nil {
+			println("Wrong type of amount. " + err.Error())
+		}
+		left, err := strconv.ParseInt(values[4].(string), 10, 64)
+		if err != nil {
+			println("Wrong type of left. " + err.Error())
+		}
+		stock, err := strconv.ParseInt(values[5].(string), 10, 64)
+		if err != nil {
+			println("Wrong type of stock. " + err.Error())
+		}
+		coupon = model.Coupon{
+			Id:          id,
+			Username:    values[1].(string),
+			CouponName:  values[2].(string),
+			Amount:      amount,
+			Left:        left,
+			Stock:       stock,
+			Description: values[6].(string),
+		}
 	}
-	left, err := strconv.ParseInt(values[4].(string), 10, 64)
-	if err != nil {
-		println("Wrong type of left. " + err.Error())
-	}
-	stock, err := strconv.ParseInt(values[5].(string), 10, 64)
-	if err != nil {
-		println("Wrong type of stock. " + err.Error())
-	}
-	return model.Coupon{
-		Id:          id,
-		Username:    values[1].(string),
-		CouponName:  values[2].(string),
-		Amount:      amount,
-		Left:        left,
-		Stock:       stock,
-		Description: values[6].(string),
-	}
+	return coupon
 
 }
 
 // 从缓存获取某个用户的所有优惠券
 func GetCoupons(userName string) ([]model.Coupon, error) {
-	var coupons []model.Coupon
+
 	hasCouponsKey := getHasCouponsKeyByName(userName)
 	couponNames, err := data.GetSetMembers(hasCouponsKey)
 	if err != nil {
 		println("Error when getting coupon members. " + err.Error())
 		return nil, err
 	}
-	// TODO: 使用数组, 不使用slice append
+
+	couponsNum := len(couponNames)
+	var coupons []model.Coupon = make([]model.Coupon, couponsNum)
 	for _, couponName := range couponNames {
 		coupon := GetCoupon(couponName)
 		coupons = append(coupons, coupon)

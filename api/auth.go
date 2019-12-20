@@ -1,6 +1,7 @@
 package api
 
 import (
+	"SecKill/api/redisService"
 	myjwt "SecKill/middleware/jwt"
 	"SecKill/model"
 	jwtgo "github.com/dgrijalva/jwt-go"
@@ -21,13 +22,19 @@ func LoginAuth(ctx *gin.Context)  {
 		ctx.JSON(http.StatusInternalServerError, gin.H{kindKey: "", ErrMsgKey: "Parse JSON format fail."})
 		return
 	} else {
-		// 查找该用户
-		queryUser := model.User{Username: postUser.Username}
-		err := data.Db.Where(&queryUser).
-			First(&queryUser).Error
-		if err != nil && gorm.IsRecordNotFoundError(err) {
-			ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: "", ErrMsgKey: "No such queryUser."})
-			return
+		// 先从redis查找用户，得到则直接认证
+		var queryUser model.User
+		if queryUser, err = redisService.GetUserByName(postUser.Username); err != nil {
+			// redis没有则再从mysql查找该用户，并把user信息缓存进redis
+			queryUser = model.User{Username: postUser.Username}
+			err := data.Db.Where(&queryUser).
+				First(&queryUser).Error
+			if err != nil && gorm.IsRecordNotFoundError(err) {
+				ctx.JSON(http.StatusUnauthorized, gin.H{kindKey: "", ErrMsgKey: "No such queryUser."})
+				return
+			}
+
+			redisService.CacheUser(queryUser) // 尽力写进redis，有可能失败，但问题不大
 		}
 
 		// 匹配密码
@@ -75,7 +82,7 @@ func generateToken(ctx *gin.Context, user model.User)  {
 
 }
 
-// 用户登出，TODO：修改退出的token
+// 用户登出，TODO：修改退出的token？ 现在没退出的需求
 func Logout(ctx *gin.Context)  {
 	session := sessions.Default(ctx)
 	session.Delete("user")

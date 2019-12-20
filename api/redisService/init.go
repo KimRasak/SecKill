@@ -40,6 +40,7 @@ var secKillSHA string  // SHA expression of secKillScript
 
 // 将数据加载到缓存预热，防止缓存穿透
 // 预热加载了商品库存key
+// 预热用户信息
 func preHeatKeys()  {
 	coupons, err := dbService.GetAllCoupons()
 	if err != nil {
@@ -53,6 +54,19 @@ func preHeatKeys()  {
 		}
 	}
 	println("---Set redis keys of coupons success.---")
+
+	users, err := dbService.GetAllUsers()
+	if err != nil {
+		panic("Error when getting all users." + err.Error())
+	}
+
+	for _, user := range users {
+		_, err := CacheUser(user)
+		if err != nil {
+			panic("Error while setting redis keys of users. " + err.Error())
+		}
+	}
+	println("---Set redis keys of users success.---")
 }
 
 func init() {

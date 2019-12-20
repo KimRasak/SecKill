@@ -23,7 +23,7 @@ type RegisterUser struct {
 }
 
 type User struct {
-	Id       int     `gorm:"primary_key;auto_increment"`
+	Id       int64     `gorm:"primary_key;auto_increment"`
 	Username string  `gorm:"type:varchar(20)"`
 	Kind     string  `gorm:"type:varchar(20)"`
 	Password string  `gorm:"type:varchar(32)"`
