@@ -116,14 +116,16 @@ func GetCoupon(couponName string) model.Coupon {
 
 // 从缓存获取某个用户的所有优惠券
 func GetCoupons(userName string) ([]model.Coupon, error) {
-	var coupons []model.Coupon
+
 	hasCouponsKey := getHasCouponsKeyByName(userName)
 	couponNames, err := data.GetSetMembers(hasCouponsKey)
 	if err != nil {
 		println("Error when getting coupon members. " + err.Error())
 		return nil, err
 	}
-	// TODO: 使用数组, 不使用slice append
+
+	couponsNum := len(couponNames)
+	var coupons []model.Coupon = make([]model.Coupon, couponsNum)
 	for _, couponName := range couponNames {
 		coupon := GetCoupon(couponName)
 		coupons = append(coupons, coupon)
