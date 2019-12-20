@@ -56,7 +56,7 @@ docker-compose 1.18
    
 # 接口测试
 ## 添加优惠券
-具体样例描述 [add_coupon_cases.go](./httptest/add_coupon_cases.go)
+具体样例描述 [add_coupon_cases.go](test/add_coupon_cases.go)
 
 如，用户添加优惠券的权限，重复添加，优惠券格式等
 
@@ -66,7 +66,7 @@ docker-compose 1.18
 
 ![add_coupon_2](./images/add_coupon_2.jpg)
 ## 注册登录
-具体样例描述 [register_test.go](./httptest/register_test.go)
+具体样例描述 [register_test.go](test/register_test.go)
 
 如，用户登录注册的格式问题，和重复注册等问题
 
@@ -75,7 +75,7 @@ docker-compose 1.18
 ![register_2](./images/register_2.jpg)
 
 ## 一些常见组合样例
-如，用户注册登录后，商家添加查看优惠券，用户查看优惠券，以及用户抢购优惠券成功失败的情况，具体样例描述 [normal_test.go](./httptest/normal_test.go)
+如，用户注册登录后，商家添加查看优惠券，用户查看优惠券，以及用户抢购优惠券成功失败的情况，具体样例描述 [normal_test.go](test/normal_test.go)
 
 ![normal_1](./images/normal_1.jpg)
 

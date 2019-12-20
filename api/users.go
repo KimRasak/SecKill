@@ -222,7 +222,7 @@ func AddCoupon(ctx *gin.Context) {
 	paramUserName := ctx.Param("username")  // 注意: 该参数是网址路径参数
 	var postCoupon model.ReqCoupon
 	if err := ctx.BindJSON(&postCoupon); err != nil {
-		log.Println("Only receive JSON format.")
+		log.Println("Expected receive JSON format. ", err.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Only receive JSON format."})
 		return
 	}

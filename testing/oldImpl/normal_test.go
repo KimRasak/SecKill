@@ -1,4 +1,4 @@
-package httptest
+package oldImpl
 
 import (
 	"SecKill/api"
@@ -113,7 +113,7 @@ func testFetchCoupon(e *httpexpect.Expect, couponAmount int) {
 	fetchDemoCouponSuccess(e)
 
 	// 商家优惠券数量-1 顾客可看到该优惠券。
-	isCouponExpectedLeft(e,  demoSellerName, 0, 0, couponAmount - 1)
+	isCouponExpectedLeft(e, demoSellerName, 0, 0, couponAmount - 1)
 	isNonEmptyCoupons(e, demoSellerName, 0)
 	isSellerSchema(e, demoSellerName, 0)
 	isNonEmptyCoupons(e, demoCustomerName, 0)
@@ -125,6 +125,7 @@ func testFetchCoupon(e *httpexpect.Expect, couponAmount int) {
 
 // 进行普通的测试，用户注册、登录后进行常规操作
 func TestNormal(t *testing.T) {
+	// 启动服务器
 	_, e := startServer(t)
 	defer data.Close()
 

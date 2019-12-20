@@ -12,10 +12,10 @@ type Coupon struct {
 }
 
 type ReqCoupon struct {
-	Name			string
-	Amount 			int64
-	Description     string
-	Stock           int64
+	Name			string  `json:"name"`
+	Amount 			int64	`json:"amount"`
+	Description     string  `json:"description"`
+	Stock           int64   `json:"stock"`
 }
 
 type ResCoupon struct {

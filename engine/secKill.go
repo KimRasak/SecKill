@@ -44,7 +44,7 @@ func SeckillEngine() *gin.Engine {
 		authRouter.POST("/logout", api.Logout)
 	}
 
-	testRouter := router.Group("/test")
+	testRouter := router.Group("/testing")
 	{
 		testRouter.GET("/", api.Welcome)
 		testRouter.GET("/flush", func(context *gin.Context) {

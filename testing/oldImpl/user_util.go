@@ -1,4 +1,4 @@
-package httptest
+package oldImpl
 
 import (
 	"SecKill/api"
@@ -46,7 +46,6 @@ func registerDemoUsers(e *httpexpect.Expect)  {
 		Expect().
 		Status(http.StatusOK).JSON().Object().
 		ValueEqual(api.ErrMsgKey, "")
-
 }
 
 
