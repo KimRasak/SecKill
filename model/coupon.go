@@ -27,8 +27,8 @@ type ResCoupon struct {
 // 商家查询优惠券时，返回的数据结构
 type SellerResCoupon struct {
 	ResCoupon
-	Amount int64 `json:"amount"`
-	Left   int64 `json:"left"`
+	Amount int64  `json:"amount"`
+	Left   int64  `json:"left"`
 }
 
 // 顾客查询优惠券时，返回的数据结构
@@ -37,7 +37,7 @@ type CustomerResCoupon struct {
 }
 
 func ParseSellerResCoupons(coupons []Coupon) []SellerResCoupon {
-	sellerCoupons := []SellerResCoupon{}
+	var sellerCoupons []SellerResCoupon
 	for _, coupon := range coupons {
 		sellerCoupons = append(sellerCoupons,
 			SellerResCoupon{ResCoupon{coupon.CouponName, coupon.Stock, coupon.Description},
