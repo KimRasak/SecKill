@@ -118,6 +118,7 @@ func GetCoupons(ctx *gin.Context) {
 	queryUserName, queryPage := ctx.Param("username"), ctx.Query("page")
 
 	// 检查page参数, TODO：全部下标改为从1开始
+	// TODO: 要不要改成BindJSON
 	var page int64
 	var tmpPage int64
 	if queryPage == "" {
@@ -209,7 +210,6 @@ func AddCoupon(ctx *gin.Context) {
 	}
 
 	// 检查参数
-
 	paramUserName := ctx.Param("username")  // 注意: 该参数是网址路径参数
 	var postCoupon model.ReqCoupon
 	if err := ctx.BindJSON(&postCoupon); err != nil {
@@ -225,19 +225,7 @@ func AddCoupon(ctx *gin.Context) {
 		return
 	}
 	amount := formAmount
-	// TODO: 检查int的范围合法性
-	//amount, amountErr := strconv.ParseInt(formAmount, 10, 64)
-	//if amountErr != nil {
-	//	ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Amount field wrong format."})
-	//	return
-	//}
 	stock := formStock
-	// TODO: 检查stock的范围合法性
-	//stock, stockErr := strconv.ParseInt(formStock, 10, 64)
-	//if stockErr != nil {
-	//	ctx.JSON(http.StatusBadRequest, gin.H{ErrMsgKey: "Stock field wrong format."})
-	//	return
-	//}
 
 	// 优惠券描述可以为空的，不需要检查长度
 	//if len(couponName) == 0 || len(description) == 0 {

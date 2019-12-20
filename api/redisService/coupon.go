@@ -109,6 +109,7 @@ func GetCoupons(userName string) ([]model.Coupon, error) {
 		println("Error when getting coupon members. " + err.Error())
 		return nil, err
 	}
+	// TODO: 使用数组, 不使用slice append
 	for _, couponName := range couponNames {
 		coupon := GetCoupon(couponName)
 		coupons = append(coupons, coupon)
