@@ -16,7 +16,7 @@ services:
     restart: 'always'
   seckill:
     restart: 'always'
-    build: .
+    image: registry.cn-shenzhen.aliyuncs.com/karlhjm/seckill:0.1.5
     ports:
       - "20080:20080"
     links:
